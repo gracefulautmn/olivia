@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:dartz/dartz.dart';
 import 'package:olivia/core/errors/exceptions.dart';
 import 'package:olivia/core/utils/constants.dart';
 import 'package:olivia/core/utils/enums.dart';
@@ -179,184 +180,145 @@ class ItemRemoteDataSourceImpl implements ItemRemoteDataSource {
     }
   }
 
-  @override
-  Future<List<ItemModel>> searchItems({
-    String? query,
-    String? categoryId,
-    String? locationId,
-    String? reportType,
-    String? status,
-    int? limit = 20, // Default limit
-    int? offset = 0, // Default offset for pagination
-  }) async {
-    try {
-      var request = supabaseClient
-          .from('items')
-          .select(
-            '*, categories(*), locations(*), profiles!inner(full_name, avatar_url)',
-          ) // Ambil sedikit info reporter
-          .order('reported_at', ascending: false);
+@override
+Future<List<ItemModel>> searchItems({
+  String? query,
+  String? categoryId,
+  String? locationId,
+  String? reportType,
+  String? status,
+  int? limit = 20,
+  int? offset = 0,
+}) async {
+  try {
+    final int currentLimit = limit ?? 20;
+    final int currentOffset = offset ?? 0;
 
-      if (query != null && query.isNotEmpty) {
-        // Menggunakan textSearch atau ilike. textSearch lebih baik jika sudah setup FTS.
-        // request = request.textSearch('item_name', query); // Jika kolom di-index untuk FTS
-        request = request.or(
-          'item_name.ilike.%$query%,description.ilike.%$query%',
-        );
-      }
-      if (categoryId != null && categoryId.isNotEmpty) {
-        request = request.eq('category_id', categoryId);
-      }
-      if (locationId != null && locationId.isNotEmpty) {
-        request = request.eq('location_id', locationId);
-      }
-      if (reportType != null && reportType.isNotEmpty) {
-        request = request.eq('report_type', reportType);
-      }
-      if (status != null && status.isNotEmpty) {
-        request = request.eq('status', status);
-      } else {
-        // Default hanya tampilkan yang 'hilang' atau 'ditemukan_tersedia' jika status tidak dispesifikkan
-        request = request.filter(
-          'status',
-          'in',
-          '(${AppConstants.itemStatusLost},${AppConstants.itemStatusFoundAvailable})',
-        );
-      }
+    // Start with select to get PostgrestFilterBuilder
+    var queryBuilder = supabaseClient
+        .from('items')
+        .select('*, categories(*), locations(*), profiles!inner(id, full_name, avatar_url)');
 
-      if (limit != null) {
-        request = request.limit(limit);
-      }
-      if (offset != null && offset > 0) {
-        request = request.range(offset, offset + limit! - 1);
-      }
-
-      final response = await request;
-
-      return response.map((itemJson) => ItemModel.fromJson(itemJson)).toList();
-    } catch (e) {
-      print("Error searching items: $e");
-      throw ServerException(message: "Gagal mencari barang: ${e.toString()}");
+    // Apply filters - now we have PostgrestFilterBuilder which has filter methods
+    if (reportType != null && reportType.isNotEmpty) {
+      queryBuilder = queryBuilder.eq('report_type', reportType);
     }
-  }
 
-  @override
-  Future<ItemModel> claimItemViaQr({
-    required String qrCodeData, // Ini adalah item_id
-    required String claimerId,
-  }) async {
-    try {
-      // 1. Dapatkan item berdasarkan qr_code_data (yang seharusnya adalah item_id)
-      final itemResponse =
-          await supabaseClient
-              .from('items')
-              .select(
-                '*, profiles!inner(*)',
-              ) // Perlu reporter_id untuk tabel claims
-              .eq('qr_code_data', qrCodeData)
-              .eq(
-                'status',
-                AppConstants.itemStatusFoundAvailable,
-              ) // Hanya bisa klaim yang tersedia
-              .single();
-
-      final itemToClaim = ItemModel.fromJson(itemResponse);
-
-      // 2. Buat entri di tabel claims
-      final claimData = {
-        'item_id': itemToClaim.id,
-        'claimer_id': claimerId,
-        'reported_by_id':
-            itemToClaim.reporterId, // Diambil dari item yang ditemukan
-      };
-      await supabaseClient.from('claims').insert(claimData);
-
-      // 3. Update status item menjadi 'ditemukan_diklaim'
-      final updatedItemResponse =
-          await supabaseClient
-              .from('items')
-              .update({'status': AppConstants.itemStatusFoundClaimed})
-              .eq('id', itemToClaim.id)
-              .select('*, profiles!inner(*), categories(*), locations(*)')
-              .single();
-
-      return ItemModel.fromJson(updatedItemResponse);
-    } on PostgrestException catch (e) {
-      if (e.code == 'PGRST116') {
-        // Not found
-        throw ServerException(
-          message: "Barang tidak ditemukan atau sudah diklaim.",
-        );
-      }
-      if (e.code == '23505' &&
-          e.details != null &&
-          e.details!.contains('unique_claim_per_item')) {
-        // Unique constraint violation
-        throw ServerException(message: "Barang ini sudah pernah diklaim.");
-      }
-      print("Supabase error claiming item: ${e.message}");
-      throw ServerException(message: "Gagal mengklaim barang: ${e.message}");
-    } catch (e) {
-      print("General error claiming item: $e");
-      throw ServerException(
-        message: "Terjadi kesalahan saat mengklaim barang: ${e.toString()}",
-      );
+    if (status != null && status.isNotEmpty) {
+      queryBuilder = queryBuilder.eq('status', status);
+    } else if (reportType == null || reportType.isEmpty) {
+      // Default status filter if no specific report type or status
+      queryBuilder = queryBuilder.inFilter('status', [
+        AppConstants.itemStatusLost,
+        AppConstants.itemStatusFoundAvailable,
+      ]);
     }
+
+    if (categoryId != null && categoryId.isNotEmpty) {
+      queryBuilder = queryBuilder.eq('category_id', categoryId);
+    }
+
+    if (locationId != null && locationId.isNotEmpty) {
+      queryBuilder = queryBuilder.eq('location_id', locationId);
+    }
+
+    // Text search on item name and description
+    if (query != null && query.isNotEmpty) {
+      queryBuilder = queryBuilder.or('item_name.ilike.%$query%,description.ilike.%$query%');
+    }
+
+    // Apply ordering and pagination
+    final List<Map<String, dynamic>> response = await queryBuilder
+        .order('reported_at', ascending: false)
+        .range(currentOffset, currentOffset + currentLimit - 1);
+
+    return response
+        .map((itemJson) => ItemModel.fromJson(itemJson))
+        .toList();
+
+  } catch (e) {
+    if (e is PostgrestException) {
+      print("Postgrest error searching items: ${e.message}, Code: ${e.code}");
+      throw ServerException(message: "Gagal mencari barang (DB Error): ${e.message}");
+    }
+    if (e is ServerException) rethrow;
+    print("General error searching items: $e");
+    throw ServerException(message: "Gagal mencari barang: ${e.toString()}");
   }
+}
 
   @override
+Future<ItemModel> claimItemViaQr({
+  required String qrCodeData, // QR = item_id
+  required String claimerId,
+}) async {
+  try {
+    // Step 1: Cari item berdasarkan QR code (item ID)
+    final itemResponse = await supabaseClient
+        .from('items')
+        .select('*, profiles!inner(*), categories(*), locations(*)')
+        .eq('qr_code_data', qrCodeData)
+        .eq('status', AppConstants.itemStatusFoundAvailable) // Hanya yang tersedia
+        .single();
+
+    final item = ItemModel.fromJson(itemResponse);
+
+    // Step 2: Masukkan klaim ke tabel 'claims'
+    final claimData = {
+      'item_id': item.id,
+      'claimer_id': claimerId,
+      'reported_by_id': item.reporterId,
+    };
+
+    await supabaseClient.from('claims').insert(claimData);
+
+    // Step 3: Update status item
+    final updatedItemResponse = await supabaseClient
+        .from('items')
+        .update({'status': AppConstants.itemStatusFoundClaimed})
+        .eq('id', item.id)
+        .select('*, profiles!inner(*), categories(*), locations(*)')
+        .single();
+
+    return ItemModel.fromJson(updatedItemResponse);
+  } on PostgrestException catch (e) {
+    if (e.code == 'PGRST116') {
+      throw ServerException(message: "Barang tidak ditemukan atau sudah diklaim.");
+    }
+    if (e.code == '23505' && e.message.contains('unique_claim_per_item')) {
+      throw ServerException(message: "Barang ini sudah pernah diklaim.");
+    }
+    throw ServerException(message: "Gagal mengklaim barang: ${e.message}");
+  } catch (e) {
+    throw ServerException(message: "Terjadi kesalahan saat klaim: ${e.toString()}");
+  }
+}
+
+
+    @override
   Future<List<ItemModel>> getClaimedItemsHistory({
     required String userId,
-    bool asClaimer =
-        true, // true: barang yg dia klaim, false: barang yg dia temukan dan diklaim orang
+    bool asClaimer = true,
   }) async {
     try {
-      // Query untuk mendapatkan item_id dari tabel claims
-      var claimsQuery = supabaseClient.from('claims').select('item_id');
+      final column = asClaimer ? 'claimer_id' : 'reported_by_id';
+      final response = await supabaseClient
+          .from('claims')
+          .select('items(*, profiles!inner(*), categories(*), locations(*))')
+          .eq(column, userId);
 
-      if (asClaimer) {
-        claimsQuery = claimsQuery.eq('claimer_id', userId);
-      } else {
-        claimsQuery = claimsQuery.eq('reported_by_id', userId);
-      }
-
-      final claimResults = await claimsQuery;
-      final List<String> itemIds =
-          claimResults.map((claim) => claim['item_id'] as String).toList();
-
-      if (itemIds.isEmpty) {
-        return []; // Tidak ada item yang relevan
-      }
-
-      // Query untuk mendapatkan detail item berdasarkan item_id yang didapat
-      // Juga join dengan tabel claims untuk mendapatkan info siapa yg klaim/lapor dan kapan
-      final itemsResponse = await supabaseClient
-          .from('items')
-          .select(
-            '*, categories(*), locations(*), profiles!reporter_id(*), claims!inner(claimer_id, reported_by_id, claimed_at, profiles!claimer_id(full_name, avatar_url), profiles!reported_by_id(full_name, avatar_url))',
-          )
-          .in_('id', itemIds)
-          .eq(
-            'status',
-            AppConstants.itemStatusFoundClaimed,
-          ) // Hanya yang sudah diklaim
-          .order(
-            'claims(claimed_at)',
-            ascending: false,
-          ); // Urutkan berdasarkan tanggal klaim terbaru
-
-      return itemsResponse.map((itemJson) {
-        // Perlu sedikit penyesuaian untuk memasukkan info dari 'claims' ke dalam ItemModel jika perlu
-        // atau buat model khusus untuk History Item. Untuk sekarang, ItemModel akan coba memuatnya jika ada.
-        return ItemModel.fromJson(itemJson);
-      }).toList();
+      final items = (response as List)
+          .map((e) => ItemModel.fromJson(e['items']))
+          .toList();
+      return items;
     } catch (e) {
-      print("Error fetching claimed items history: $e");
+      print("Error getting claimed items history: $e");
       throw ServerException(
-        message: "Gagal mengambil riwayat barang: ${e.toString()}",
+        message: "Gagal mengambil riwayat klaim: ${e.toString()}",
       );
     }
   }
+
 
   @override
   Future<ItemModel> updateItemStatus({

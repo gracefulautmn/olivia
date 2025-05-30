@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:olivia/core/utils/app_colors.dart';
 import 'package:olivia/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:olivia/features/auth/presentation/pages/signup_page.dart' show SignUpPage;
 import 'package:olivia/navigation/app_router.dart';
 import 'package:olivia/navigation/main_navigation.dart'; // Import router
 
@@ -132,7 +133,12 @@ class _LoginPageState extends State<LoginPage> {
                       );
                     },
                   ),
-                  // Tambahkan opsi "Lupa password?" atau "Daftar" jika ada
+                  TextButton(
+                    onPressed: () {
+                      context.push(SignUpPage.routeName); // atau context.go() jika ingin mengganti stack
+                    },
+                    child: const Text('Belum punya akun? Daftar di sini'),
+                  )
                 ],
               ),
             ),

@@ -3,27 +3,29 @@ import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:olivia/core/errors/failures.dart';
 import 'package:olivia/features/auth/domain/entities/user_profile.dart';
-import 'package:olivia/features/auth/presentation/bloc/auth_bloc.dart'; // Untuk update user di AuthBloc
+// Pastikan AuthUserChanged (event publik) dapat diakses.
+// Import auth_bloc.dart seharusnya sudah cukup jika AuthUserChanged diekspor atau
+// merupakan bagian dari library yang sama dan auth_event.dart adalah 'part of' auth_bloc.dart.
+import 'package:olivia/features/auth/presentation/bloc/auth_bloc.dart'; 
 import 'package:olivia/features/profile/domain/usecases/get_user_profile.dart';
 import 'package:olivia/features/profile/domain/usecases/update_user_profile.dart';
 
-part 'profile_event.dart';
-part 'profile_state.dart';
+part 'profile_event.dart'; // Asumsikan file ini ada dan benar
+part 'profile_state.dart'; // Asumsikan file ini ada dan benar
 
 class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
   final GetUserProfile _getUserProfile;
   final UpdateUserProfile _updateUserProfile;
-  final AuthBloc
-  _authBloc; // Untuk memberitahu AuthBloc jika profil user saat ini diupdate
+  final AuthBloc _authBloc;
 
   ProfileBloc({
     required GetUserProfile getUserProfile,
     required UpdateUserProfile updateUserProfile,
     required AuthBloc authBloc,
-  }) : _getUserProfile = getUserProfile,
-       _updateUserProfile = updateUserProfile,
-       _authBloc = authBloc,
-       super(const ProfileState()) {
+  })  : _getUserProfile = getUserProfile,
+        _updateUserProfile = updateUserProfile,
+        _authBloc = authBloc,
+        super(const ProfileState()) { // Pastikan ProfileState punya constructor default
     on<LoadUserProfile>(_onLoadUserProfile);
     on<UpdateProfileRequested>(_onUpdateProfileRequested);
     on<ProfileAvatarChanged>(_onProfileAvatarChanged);
@@ -80,23 +82,24 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
   ) async {
     emit(state.copyWith(status: ProfileStatus.updating, clearFailure: true));
 
-    // Cek apakah ada perubahan
     bool hasChanges = false;
     if (state.newAvatarFile != null) hasChanges = true;
-    if (event.fullName != null && event.fullName != state.userProfile?.fullName)
+    if (event.fullName != null && event.fullName != state.userProfile?.fullName) {
       hasChanges = true;
-    if (event.major != null && event.major != state.userProfile?.major)
+    }
+    if (event.major != null && event.major != state.userProfile?.major) {
       hasChanges = true;
+    }
 
     if (!hasChanges && state.newAvatarFile == null) {
       emit(
         state.copyWith(status: ProfileStatus.loaded),
-      ); // Kembali ke loaded jika tidak ada perubahan
+      ); 
       return;
     }
 
     final params = UpdateUserProfileParams(
-      userId: event.userId,
+      userId: event.userId, // Pastikan event.userId selalu ada dan benar
       fullName: event.fullName,
       major: event.major,
       avatarFile: state.newAvatarFile,
@@ -115,14 +118,16 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
             userProfile: updatedProfile,
             currentFullName: updatedProfile.fullName,
             currentMajor: updatedProfile.major ?? '',
-            clearNewAvatarFile: true, // Bersihkan file avatar setelah sukses
+            clearNewAvatarFile: true, 
           ),
         );
+        
         // Jika user yang diupdate adalah user yang sedang login, update juga state di AuthBloc
+        // Menggunakan event publik AuthUserChanged
         if (_authBloc.state.user?.id == updatedProfile.id) {
           _authBloc.add(
-            _AuthUserChanged(updatedProfile),
-          ); // Event internal AuthBloc
+            AuthUserChanged(updatedProfile), // << PERBAIKAN DI SINI
+          ); 
         }
       },
     );

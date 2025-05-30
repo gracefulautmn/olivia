@@ -9,7 +9,7 @@ import 'package:olivia/features/item/domain/entities/item.dart';
 import 'package:olivia/features/item/domain/usecases/claim_item_via_qr.dart';
 import 'package:olivia/common_widgets/loading_indicator.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
-import 'package:olivia/features/item/presentation/pages/item_detail_page.dart'; // Dependensi untuk scan QR
+import 'package:olivia/features/item/presentation/pages/item_detail_page.dart';
 
 // BLoC untuk Scan & Claim
 class ScanClaimCubit extends Cubit<ScanClaimState> {
@@ -67,11 +67,10 @@ class ScanQrPage extends StatefulWidget {
 
 class _ScanQrPageState extends State<ScanQrPage> {
   MobileScannerController cameraController = MobileScannerController(
-    detectionSpeed: DetectionSpeed.normal, // Atau .noDuplicates
-    // facing: CameraFacing.back,
-    // torchEnabled: false,
+    detectionSpeed: DetectionSpeed.normal,
   );
   bool _isProcessing = false;
+  bool _isTorchOn = false; // Track torch state manually
 
   @override
   void dispose() {
@@ -107,6 +106,13 @@ class _ScanQrPageState extends State<ScanQrPage> {
     }
   }
 
+  void _toggleTorch() async {
+    await cameraController.toggleTorch();
+    setState(() {
+      _isTorchOn = !_isTorchOn;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
@@ -117,39 +123,13 @@ class _ScanQrPageState extends State<ScanQrPage> {
           actions: [
             IconButton(
               color: Colors.white,
-              icon: ValueListenableBuilder(
-                valueListenable: cameraController.torchState,
-                builder: (context, state, child) {
-                  switch (state) {
-                    case TorchState.off:
-                      return const Icon(Icons.flash_off, color: Colors.grey);
-                    case TorchState.on:
-                      return const Icon(
-                        Icons.flash_on,
-                        color: AppColors.secondaryColor,
-                      );
-                  }
-                },
+              icon: Icon(
+                _isTorchOn ? Icons.flash_on : Icons.flash_off,
+                color: _isTorchOn ? AppColors.secondaryColor : Colors.grey,
               ),
               iconSize: 32.0,
-              onPressed: () => cameraController.toggleTorch(),
+              onPressed: _toggleTorch,
             ),
-            // IconButton( // Jika perlu switch kamera
-            //   color: Colors.white,
-            //   icon: ValueListenableBuilder(
-            //     valueListenable: cameraController.cameraFacingState,
-            //     builder: (context, state, child) {
-            //       switch (state) {
-            //         case CameraFacing.front:
-            //           return const Icon(Icons.camera_front);
-            //         case CameraFacing.back:
-            //           return const Icon(Icons.camera_rear);
-            //       }
-            //     },
-            //   ),
-            //   iconSize: 32.0,
-            //   onPressed: () => cameraController.switchCamera(),
-            // ),
           ],
         ),
         body: BlocConsumer<ScanClaimCubit, ScanClaimState>(
@@ -209,12 +189,6 @@ class _ScanQrPageState extends State<ScanQrPage> {
                   onDetect: (capture) {
                     _handleBarcode(context, capture);
                   },
-                  // Fitur overlay untuk area scan (opsional)
-                  // scanWindow: Rect.fromCenter(
-                  //   center: MediaQuery.of(context).size.center(Offset.zero),
-                  //   width: 250,
-                  //   height: 250,
-                  // ),
                 ),
                 // Tambahkan UI overlay di sini jika perlu (misal kotak penanda area scan)
                 Center(
@@ -234,13 +208,16 @@ class _ScanQrPageState extends State<ScanQrPage> {
                   bottom: 50,
                   left: 0,
                   right: 0,
-                  child: Text(
-                    'Arahkan kamera ke QR Code pada barang temuan.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.9),
-                      backgroundColor: Colors.black.withOpacity(0.5),
-                      fontSize: 16,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    child: Text(
+                      'Arahkan kamera ke QR Code pada barang temuan.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.9),
+                        backgroundColor: Colors.black.withOpacity(0.5),
+                        fontSize: 16,
+                      ),
                     ),
                   ),
                 ),

@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:dartz/dartz.dart';
+import 'package:olivia/core/errors/exceptions.dart' as core_exceptions;
 import 'package:olivia/core/errors/exceptions.dart';
 import 'package:olivia/core/errors/failures.dart';
 import 'package:olivia/features/item/data/datasources/item_remote_data_source.dart';
@@ -49,7 +50,8 @@ class ItemRepositoryImpl implements ItemRepository {
       return Right(itemModel);
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
-    } on AuthException catch (e) {
+    // ignore: dead_code_on_catch_subtype
+    } on core_exceptions.AuthException catch (e) {
       // Jika ada error auth spesifik
       return Left(AuthFailure(e.message));
     } catch (e) {

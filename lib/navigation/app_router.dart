@@ -1,60 +1,60 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:olivia/core/di/service_locator.dart';
 import 'package:olivia/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:olivia/features/auth/presentation/pages/login_page.dart';
+import 'package:olivia/features/auth/presentation/pages/signup_page.dart';
 import 'package:olivia/features/chat/presentation/pages/chat_detail_page.dart';
 import 'package:olivia/features/chat/presentation/pages/chat_list_page.dart';
 import 'package:olivia/features/history/presentation/pages/history_page.dart';
 import 'package:olivia/features/home/presentation/pages/home_page.dart';
-import 'package:olivia/features/item/domain/entities/item.dart';
 import 'package:olivia/features/item/presentation/pages/item_detail_page.dart';
 import 'package:olivia/features/item/presentation/pages/report_item_page.dart';
 import 'package:olivia/features/item/presentation/pages/scan_qr_page.dart';
 import 'package:olivia/features/item/presentation/pages/search_results_page.dart';
 import 'package:olivia/features/notification/presentation/pages/notification_page.dart';
-import 'package:olivia/features/profile/presentation/pages/profile_page.dart';
+import 'package:olivia/features/profile/presentation/pages/profile_page.dart'; // Pastikan ini diimpor
 import 'package:olivia/navigation/main_navigation_scaffold.dart';
 
-// Kunci Global untuk NavigatorState di root
-final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>(
-  debugLabel: 'root',
-);
-// Kunci Global untuk NavigatorState di dalam ShellRoute (untuk bottom nav)
-final GlobalKey<NavigatorState> _shellNavigatorKey = GlobalKey<NavigatorState>(
-  debugLabel: 'shell',
-);
+final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'root');
+final GlobalKey<NavigatorState> _shellNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'shell');
 
 class AppRouter {
   GoRouter config() {
-    final authBloc = sl<AuthBloc>(); // Ambil AuthBloc dari GetIt
+    final authBloc = sl<AuthBloc>();
 
     return GoRouter(
       navigatorKey: _rootNavigatorKey,
-      initialLocation: LoginPage.routeName, // Mulai dari login
-      debugLogDiagnostics: true, // Berguna untuk debugging routing
-      refreshListenable: GoRouterRefreshStream(
-        authBloc.stream,
-      ), // Dengar perubahan state auth
+      initialLocation: LoginPage.routeName,
+      debugLogDiagnostics: true,
+      refreshListenable: GoRouterRefreshStream(authBloc.stream),
       redirect: (BuildContext context, GoRouterState state) {
-        final bool loggedIn = authBloc.state.status == AuthStatus.authenticated;
-        final bool loggingIn = state.matchedLocation == LoginPage.routeName;
+        final bool isLoggedIn = authBloc.state.status == AuthStatus.authenticated;
+        final String targetLocation = state.matchedLocation;
+        final unprotectedRoutes = [LoginPage.routeName, SignUpPage.routeName];
 
-        // Jika belum login dan tidak sedang di halaman login, redirect ke login
-        if (!loggedIn && !loggingIn) {
-          return LoginPage.routeName;
+        if (isLoggedIn) {
+          if (unprotectedRoutes.contains(targetLocation)) {
+            return MainNavigationScaffold.routeName; // Path ke ShellRoute (misal '/main')
+          }
+        } else {
+          if (!unprotectedRoutes.contains(targetLocation)) {
+            return LoginPage.routeName;
+          }
         }
-        // Jika sudah login dan masih di halaman login, redirect ke home
-        if (loggedIn && loggingIn) {
-          return MainNavigationScaffold.routeName;
-        }
-        return null; // Tidak ada redirect
+        return null;
       },
       routes: <RouteBase>[
         GoRoute(
           path: LoginPage.routeName,
           name: LoginPage.routeName,
           builder: (context, state) => const LoginPage(),
+        ),
+        GoRoute(
+          path: SignUpPage.routeName,
+          name: SignUpPage.routeName,
+          builder: (context, state) => const SignUpPage(),
         ),
         // ShellRoute untuk BottomNavigationBar
         ShellRoute(
@@ -63,48 +63,54 @@ class AppRouter {
             return MainNavigationScaffold(child: child);
           },
           routes: <RouteBase>[
+            // Rute untuk tab pertama (Beranda) dan sub-rutenya (Profil)
             GoRoute(
-              path:
-                  MainNavigationScaffold
-                      .routeName, // Biasanya '/' atau '/home' setelah login
-              name: MainNavigationScaffold.routeName,
+              path: MainNavigationScaffold.routeName, // Misal: '/main'
+              name: MainNavigationScaffold.routeName, // Nama untuk rute dasar Shell
               builder: (BuildContext context, GoRouterState state) {
-                return const HomePage(); // Halaman default untuk tab pertama
+                // Ini adalah halaman default yang ditampilkan saat ShellRoute aktif
+                // atau saat navigasi ke MainNavigationScaffold.routeName
+                return const HomePage();
               },
               routes: <RouteBase>[
-                // Sub-rute dari Home (jika ada yang tidak di bottom nav tapi terkait home)
+                // ProfilePage sebagai sub-rute dari /main (atau HomePage)
+                // Ini berarti path lengkapnya akan menjadi /main/profile
                 GoRoute(
-                  path: ProfilePage.routeName.substring(
-                    1,
-                  ), // Hilangkan '/' di awal
-                  name: ProfilePage.routeName,
+                  // Path di sini relatif terhadap parent ('/main')
+                  // Jika ProfilePage.routeName adalah '/profile', maka cukup 'profile'
+                  path: 'profile', // Langsung nama path tanpa '/' di awal
+                  name: ProfilePage.routeName, // Nama rute tetap '/profile' untuk kemudahan `namedNavigation`
                   builder: (context, state) => const ProfilePage(),
                 ),
               ],
             ),
+            // Rute untuk tab kedua (Lapor)
             GoRoute(
-              path: ReportItemPage.routeName,
+              path: ReportItemPage.routeName, // Misal: '/report-item'
               name: ReportItemPage.routeName,
               builder: (BuildContext context, GoRouterState state) {
                 return const ReportItemPage();
               },
             ),
+            // Rute untuk tab ketiga (Scan)
             GoRoute(
-              path: ScanQrPage.routeName,
+              path: ScanQrPage.routeName, // Misal: '/scan-qr'
               name: ScanQrPage.routeName,
               builder: (BuildContext context, GoRouterState state) {
                 return const ScanQrPage();
               },
             ),
+            // Rute untuk tab keempat (Notifikasi)
             GoRoute(
-              path: NotificationPage.routeName,
+              path: NotificationPage.routeName, // Misal: '/notifications'
               name: NotificationPage.routeName,
               builder: (BuildContext context, GoRouterState state) {
                 return const NotificationPage();
               },
             ),
+            // Rute untuk tab kelima (Riwayat)
             GoRoute(
-              path: HistoryPage.routeName,
+              path: HistoryPage.routeName, // Misal: '/history'
               name: HistoryPage.routeName,
               builder: (BuildContext context, GoRouterState state) {
                 return const HistoryPage();
@@ -112,48 +118,57 @@ class AppRouter {
             ),
           ],
         ),
-        // Rute di luar ShellRoute (tidak memiliki bottom navigation bar)
+        // Rute lain di luar ShellRoute (tidak akan memiliki BottomNavigationBar)
         GoRoute(
-          path: ItemDetailPage.routeName, // e.g. /item-detail/:itemId
+          path: ItemDetailPage.routeName,
           name: ItemDetailPage.routeName,
           builder: (context, state) {
             final itemId = state.pathParameters['itemId']!;
-            // final item = state.extra as ItemEntity?; // Jika mengirim objek
-            return ItemDetailPage(itemId: itemId /* item: item */);
+            return ItemDetailPage(itemId: itemId);
           },
         ),
         GoRoute(
-          path: SearchResultsPage.routeName, // e.g. /search
+          path: SearchResultsPage.routeName,
           name: SearchResultsPage.routeName,
           builder: (context, state) {
             final query = state.uri.queryParameters['query'];
             final categoryId = state.uri.queryParameters['categoryId'];
+            final categoryName = state.uri.queryParameters['categoryName'];
             final locationId = state.uri.queryParameters['locationId'];
+            final locationName = state.uri.queryParameters['locationName'];
             final reportType = state.uri.queryParameters['reportType'];
             return SearchResultsPage(
               initialQuery: query,
               categoryId: categoryId,
+              categoryName: categoryName,
               locationId: locationId,
+              locationName: locationName,
               reportType: reportType,
             );
           },
         ),
         GoRoute(
-          path: ChatListPage.routeName, // e.g. /chats
+          path: ChatListPage.routeName,
           name: ChatListPage.routeName,
           builder: (context, state) => const ChatListPage(),
         ),
         GoRoute(
-          path: ChatDetailPage.routeName, // e.g. /chat/:chatRoomId
+          path: ChatDetailPage.routeName,
           name: ChatDetailPage.routeName,
           builder: (context, state) {
-            final chatRoomId = state.pathParameters['chatRoomId']!;
-            final recipientName =
-                state.uri.queryParameters['recipientName'] ?? 'Chat';
-            // Anda mungkin juga perlu user ID penerima
+            final chatRoomId = state.pathParameters['chatRoomId'];
+            final recipientId = state.uri.queryParameters['recipientId'];
+            final recipientName = state.uri.queryParameters['recipientName'] ?? 'Chat';
+            final itemId = state.uri.queryParameters['itemId'];
+
+            if (recipientId == null || recipientId.isEmpty) {
+              return const Scaffold(body: Center(child: Text("Error: Informasi penerima tidak lengkap.")));
+            }
             return ChatDetailPage(
               chatRoomId: chatRoomId,
+              recipientId: recipientId,
               recipientName: recipientName,
+              itemId: itemId,
             );
           },
         ),
@@ -162,7 +177,7 @@ class AppRouter {
   }
 }
 
-// Helper class untuk GoRouter refreshListenable dari Stream
+// Helper class GoRouterRefreshStream (tetap sama)
 class GoRouterRefreshStream extends ChangeNotifier {
   GoRouterRefreshStream(Stream<dynamic> stream) {
     notifyListeners();
@@ -170,9 +185,7 @@ class GoRouterRefreshStream extends ChangeNotifier {
       (dynamic _) => notifyListeners(),
     );
   }
-
   late final StreamSubscription<dynamic> _subscription;
-
   @override
   void dispose() {
     _subscription.cancel();

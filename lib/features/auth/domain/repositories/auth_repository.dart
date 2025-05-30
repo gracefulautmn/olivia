@@ -8,7 +8,15 @@ abstract class AuthRepository {
     required String password,
   });
 
+  // Tambahkan method signUpUser
+  Future<Either<Failure, UserProfile>> signUpUser({
+    required String email,
+    required String password,
+    required String fullName,
+    // Map<String, dynamic>? userMetadata, // Opsional jika ada data lain
+  });
+
   Future<Either<Failure, UserProfile?>> getCurrentUser();
-  Stream<UserProfile?> get authStateChanges; // Untuk memantau status login
+  Stream<UserProfile?> get authStateChanges;
   Future<Either<Failure, void>> logoutUser();
 }
