@@ -64,15 +64,14 @@ class ItemsCarouselWidget extends StatelessWidget {
           ),
         ),
         SizedBox(
-          height: 220, // Sesuaikan tinggi carousel
+          height: 250, // Increased height to accommodate content
           child: ListView.builder(
             padding: const EdgeInsets.symmetric(horizontal: 12.0),
             scrollDirection: Axis.horizontal,
             itemCount:
                 items.length > 6
                     ? 6
-                    : items
-                        .length, // Tampilkan maks 6, sisanya di "Lihat Semua"
+                    : items.length,
             itemBuilder: (context, index) {
               return _buildItemCard(context, items[index]);
             },
@@ -88,7 +87,6 @@ class ItemsCarouselWidget extends StatelessWidget {
         context.pushNamed(
           ItemDetailPage.routeName,
           pathParameters: {'itemId': item.id},
-          // extra: item, // Anda bisa mengirim seluruh objek jika diperlukan di detail page
         );
       },
       child: Card(
@@ -96,89 +94,91 @@ class ItemsCarouselWidget extends StatelessWidget {
         margin: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 8.0),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         child: SizedBox(
-          width: 150, // Lebar kartu
+          width: 150,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Image container with fixed height
               Container(
                 height: 120,
                 decoration: BoxDecoration(
                   borderRadius: const BorderRadius.vertical(
                     top: Radius.circular(10),
                   ),
-                  image:
-                      item.imageUrl != null && item.imageUrl!.isNotEmpty
-                          ? DecorationImage(
-                            image: NetworkImage(item.imageUrl!),
-                            fit: BoxFit.cover,
-                          )
-                          : null,
-                  color:
-                      item.imageUrl == null || item.imageUrl!.isEmpty
-                          ? Colors.grey[300]
-                          : null,
-                ),
-                child:
-                    item.imageUrl == null || item.imageUrl!.isEmpty
-                        ? const Center(
-                          child: Icon(
-                            Icons.image_not_supported,
-                            color: Colors.grey,
-                            size: 40,
-                          ),
+                  image: item.imageUrl != null && item.imageUrl!.isNotEmpty
+                      ? DecorationImage(
+                          image: NetworkImage(item.imageUrl!),
+                          fit: BoxFit.cover,
                         )
-                        : null,
-              ),
-              Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      item.itemName,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      item.categoryName ?? 'Tanpa Kategori',
-                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      item.locationName ?? 'Tanpa Lokasi',
-                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 4),
-                    Chip(
-                      label: Text(
-                        item.reportType == ReportType.penemuan
-                            ? 'Ditemukan'
-                            : 'Hilang',
-                        style: const TextStyle(
-                          fontSize: 10,
-                          color: Colors.white,
+                      : null,
+                  color: item.imageUrl == null || item.imageUrl!.isEmpty
+                      ? Colors.grey[300]
+                      : null,
+                ),
+                child: item.imageUrl == null || item.imageUrl!.isEmpty
+                    ? const Center(
+                        child: Icon(
+                          Icons.image_not_supported,
+                          color: Colors.grey,
+                          size: 40,
                         ),
+                      )
+                    : null,
+              ),
+              // Flexible content area
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        item.itemName,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      backgroundColor:
+                      const SizedBox(height: 2),
+                      Text(
+                        item.categoryName ?? 'Tanpa Kategori',
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        item.locationName ?? 'Tanpa Lokasi',
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const Spacer(), // Push chip to bottom
+                      Chip(
+                        label: Text(
                           item.reportType == ReportType.penemuan
-                              ? Colors.green
-                              : Colors.orange,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 0,
+                              ? 'Ditemukan'
+                              : 'Hilang',
+                          style: const TextStyle(
+                            fontSize: 10,
+                            color: Colors.white,
+                          ),
+                        ),
+                        backgroundColor: item.reportType == ReportType.penemuan
+                            ? Colors.green
+                            : Colors.orange,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 0,
+                        ),
+                        visualDensity: VisualDensity.compact,
+                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
-                      visualDensity: VisualDensity.compact,
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ],

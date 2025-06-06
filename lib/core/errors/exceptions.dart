@@ -18,3 +18,8 @@ class AuthException implements Exception { // Definisi AuthException Anda
   final String message;
   AuthException({required this.message}); // Constructor yang benar
 }
+
+class NotFoundException implements Exception {
+  final String message;
+  NotFoundException({this.message = "The requested resource was not found."});
+}

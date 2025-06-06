@@ -65,7 +65,7 @@ class ItemRemoteDataSourceImpl implements ItemRemoteDataSource {
       final fileName =
           '${itemId}_${DateTime.now().millisecondsSinceEpoch}.${imageFile.path.split('.').last}';
       final path = await supabaseClient.storage
-          .from('item_images') // Nama bucket Anda
+          .from('item-images') // Nama bucket Anda
           .upload(
             fileName,
             imageFile,
@@ -73,7 +73,7 @@ class ItemRemoteDataSourceImpl implements ItemRemoteDataSource {
           );
       // Dapatkan URL publik setelah upload
       final publicUrl = supabaseClient.storage
-          .from('item_images')
+          .from('item-images')
           .getPublicUrl(fileName);
       return publicUrl;
     } catch (e) {
@@ -392,7 +392,7 @@ Future<ItemModel> claimItemViaQr({
       // if (itemToDelete.imageUrl != null && itemToDelete.imageUrl!.isNotEmpty) {
       //   try {
       //     final imagePath = Uri.parse(itemToDelete.imageUrl!).pathSegments.last;
-      //     await supabaseClient.storage.from('item_images').remove([imagePath]);
+      //     await supabaseClient.storage.from('item-images').remove([imagePath]);
       //   } catch (storageError) {
       //     print("Error deleting image from storage: $storageError");
       //     // Lanjutkan proses hapus item dari DB meskipun gambar gagal dihapus

@@ -13,7 +13,7 @@ class AdBannerWidget extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         image: const DecorationImage(
           // Ganti dengan URL gambar iklan Anda atau aset lokal
-          image: NetworkImage('https://via.placeholder.com/600x250/005AAB/FFFFFF?Text=Informasi+Penting+Kampus'),
+          image: NetworkImage('https://chatgpt.com/s/m_684051d7afc88191b9229518383072a9'),
           fit: BoxFit.cover,
         ),
       ),

@@ -40,6 +40,9 @@ class ChatDetailBloc extends Bloc<ChatDetailEvent, ChatDetailState> {
   }
 
   Future<void> _onInitializeChatRoom(InitializeChatRoom event, Emitter<ChatDetailState> emit) async {
+    print('🟡 [ChatDetailBloc] InitializeChatRoom started');
+    print('🟡 [ChatDetailBloc] Parameters: currentUserId=${event.currentUserId}, otherUserId=${event.otherUserId}');
+    
     emit(state.copyWith(status: ChatDetailStatus.loadingRoom, recipientName: event.recipientName, clearFailure: true));
     _currentUserId = event.currentUserId; // Simpan currentUserId
 
