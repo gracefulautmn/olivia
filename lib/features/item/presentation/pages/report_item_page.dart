@@ -12,6 +12,7 @@ import 'package:olivia/features/home/domain/entities/location.dart';
 import 'package:olivia/features/item/presentation/bloc/report_item/report_item_bloc.dart';
 import 'package:olivia/common_widgets/custom_button.dart'; // Asumsi ada widget ini
 import 'package:olivia/common_widgets/loading_indicator.dart'; // Asumsi ada widget ini
+import 'package:olivia/navigation/main_navigation_scaffold.dart';
 
 class ReportItemPage extends StatelessWidget {
   const ReportItemPage({super.key});
@@ -27,7 +28,7 @@ class ReportItemPage extends StatelessWidget {
           title: const Text('Lapor Barang'),
           leading: IconButton(
             icon: const Icon(Icons.close),
-            onPressed: () => context.pop(),
+            onPressed: () => context.go(MainNavigationScaffold.routeName),
           ),
         ),
         body: BlocConsumer<ReportItemBloc, ReportItemState>(
@@ -55,7 +56,7 @@ class ReportItemPage extends StatelessWidget {
                     backgroundColor: Colors.green,
                   ),
                 );
-              context.pop(); // Kembali ke halaman sebelumnya
+              context.go(MainNavigationScaffold.routeName); // Kembali ke halaman utama (Beranda)
             }
           },
           builder: (context, state) {

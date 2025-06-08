@@ -243,38 +243,49 @@ class ProfilePage extends StatelessWidget {
         const Divider(),
 
         // Form Edit (Nama dan Jurusan jika mahasiswa)
-        _buildEditableField(
-          context: context,
-          label: 'Nama Lengkap',
-          initialValue: profileState.currentFullName,
-          icon: Icons.person_outline,
-          onChanged:
-              (value) => context.read<ProfileBloc>().add(
-                ProfileFullNameChanged(value),
-              ),
-          validator: (value) {
-            if (value == null || value.isEmpty)
-              return 'Nama tidak boleh kosong';
-            return null;
-          },
+        // _buildEditableField(
+        //   context: context,
+        //   label: 'Nama Lengkap',
+        //   initialValue: profileState.currentFullName,
+        //   icon: Icons.person_outline,
+        //   onChanged:
+        //       (value) => context.read<ProfileBloc>().add(
+        //         ProfileFullNameChanged(value),
+        //       ),
+        //   validator: (value) {
+        //     if (value == null || value.isEmpty)
+        //       return 'Nama tidak boleh kosong';
+        //     return null;
+        //   },
+        // ),
+        _buildInfoRow(
+          Icons.person_outline,
+          'Nama Lengkap',
+          user.fullName,
         ),
 
-        if (isStudent)
-          _buildEditableField(
-            context: context,
-            label: 'Jurusan',
-            initialValue: profileState.currentMajor,
-            icon: Icons.school_outlined,
-            onChanged:
-                (value) =>
-                    context.read<ProfileBloc>().add(ProfileMajorChanged(value)),
+        // if (isStudent)
+        //   _buildEditableField(
+        //     context: context,
+        //     label: 'Jurusan',
+        //     initialValue: profileState.currentMajor,
+        //     icon: Icons.school_outlined,
+        //     onChanged:
+        //         (value) =>
+        //             context.read<ProfileBloc>().add(ProfileMajorChanged(value)),
             // validator: (value) {
             //   if (value == null || value.isEmpty) return 'Jurusan tidak boleh kosong';
             //   return null;
             // },
             // Jurusan bisa opsional jika memang boleh null
+          // ),
+         if (isStudent)
+          _buildInfoRow(
+            Icons.school_outlined,
+            'Jurusan',
+            user.major ?? '-', // Menampilkan '-' jika major null
           ),
-
+          
         if (user.nim != null && user.nim!.isNotEmpty)
           _buildInfoRow(Icons.badge_outlined, 'NIM/NIDN', user.nim!),
 

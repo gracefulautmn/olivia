@@ -20,6 +20,17 @@ class UserProfile extends Equatable {
     this.avatarUrl,
   });
 
+  String get initials {
+    if (fullName.isEmpty) return '?';
+    List<String> nameParts = fullName.trim().split(' ');
+    if (nameParts.length > 1) {
+      return nameParts[0][0].toUpperCase() + nameParts.last[0].toUpperCase();
+    } else if (nameParts.isNotEmpty && nameParts[0].isNotEmpty) {
+      return nameParts[0][0].toUpperCase();
+    }
+    return '?';
+  }
+  
   @override
   List<Object?> get props => [id, email, fullName, role, nim, major, avatarUrl];
 }
