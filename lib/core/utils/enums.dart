@@ -1,5 +1,5 @@
 // Enum dari skema SQL Anda (digunakan di entity dan model)
-enum UserRole { mahasiswa, staff_dosen }
+enum UserRole { mahasiswa, staff_dosen, keamanan }
 enum ItemStatus { hilang, ditemukan_tersedia, ditemukan_diklaim }
 enum ReportType { kehilangan, penemuan }
 
@@ -11,6 +11,8 @@ UserRole userRoleFromString(String value) {
       return UserRole.mahasiswa;
     case 'staff_dosen':
       return UserRole.staff_dosen;
+    case 'keamanan':
+      return UserRole.keamanan;
     default:
       throw ArgumentError('Unknown UserRole string: $value');
   }
@@ -22,6 +24,8 @@ String userRoleToString(UserRole role) {
       return 'mahasiswa';
     case UserRole.staff_dosen:
       return 'staff_dosen';
+    case UserRole.keamanan:
+      return 'keamanan';
   }
 }
 

@@ -1,7 +1,8 @@
-import 'dart:io'; // Untuk File gambar
+import 'dart:io';
 import 'package:dartz/dartz.dart';
 import 'package:olivia/core/errors/failures.dart';
 import 'package:olivia/features/item/domain/entities/item.dart';
+import 'package:olivia/features/history/domain/entities/claim_history_entry.dart';
 
 abstract class ItemRepository {
   Future<Either<Failure, ItemEntity>> reportItem({
@@ -10,8 +11,8 @@ abstract class ItemRepository {
     String? description,
     String? categoryId,
     String? locationId,
-    required String reportType, // 'kehilangan' atau 'penemuan'
-    File? imageFile, // File gambar yang akan diupload
+    required String reportType,
+    File? imageFile,
     double? latitude,
     double? longitude,
   });
@@ -22,29 +23,25 @@ abstract class ItemRepository {
     String? query,
     String? categoryId,
     String? locationId,
-    String? reportType, // 'kehilangan', 'penemuan', atau null untuk semua
-    String? status, // 'hilang', 'ditemukan_tersedia', atau null
+    String? reportType,
+    String? status,
     int? limit,
     int? offset,
   });
 
   Future<Either<Failure, ItemEntity>> claimItemViaQr({
-    required String qrCodeData, // Data dari QR code (item_id)
-    required String claimerId,  // User ID yang mengklaim
+    required String qrCodeData,
+    required String claimerId,
   });
 
-  Future<Either<Failure, List<ItemEntity>>> getClaimedItemsHistory({
-    required String userId, // User ID untuk melihat riwayat klaimnya atau temuannya yg diklaim
-    bool asClaimer = true, // true jika melihat barang yg dia klaim, false jika melihat barang yg dia temukan dan sudah diklaim
-  });
+  // === METODE BARU UNTUK RIWAYAT GLOBAL ===
+  Future<Either<Failure, List<ClaimHistoryEntry>>> getGlobalClaimHistory();
 
-  Future<Either<Failure, ItemEntity>> updateItemStatus({
-    required String itemId,
-    required String newStatus, // 'ditemukan_diklaim'
-    String? claimerId, // Opsional, jika status berubah karena diklaim
-  });
+  // === METODE LAMA YANG SUDAH TIDAK RELEVAN DIHAPUS ===
+  // Future<Either<Failure, List<ItemEntity>>> getClaimedItemsHistory(...) -> Dihapus
+  // Future<Either<Failure, ItemEntity>> updateItemStatus(...) -> Dihapus
 
-  // Opsional: update dan delete item oleh reporter
+  // Update dan delete item oleh reporter tetap ada
   Future<Either<Failure, ItemEntity>> updateItem(ItemEntity item, {File? newImageFile});
   Future<Either<Failure, void>> deleteItem(String itemId);
 }

@@ -12,7 +12,6 @@ class GetGlobalClaimHistory implements UseCase<List<ClaimHistoryEntry>, NoParams
 
   @override
   Future<Either<Failure, List<ClaimHistoryEntry>>> call(NoParams params) async {
-    // Memanggil metode repository yang baru untuk riwayat global
     return await repository.getGlobalClaimHistory();
   }
 }

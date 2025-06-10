@@ -3,6 +3,7 @@ import 'package:dartz/dartz.dart';
 import 'package:olivia/core/errors/exceptions.dart';
 import 'package:olivia/core/utils/constants.dart';
 import 'package:olivia/core/utils/enums.dart';
+import 'package:olivia/features/history/data/models/claim_history_entry_model.dart';
 import 'package:olivia/features/item/data/models/item_model.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart'; // Untuk generate UUID jika perlu
@@ -47,7 +48,7 @@ abstract class ItemRemoteDataSource {
     required String newStatus,
     String? claimerId,
   });
-
+  Future<List<ClaimHistoryEntryModel>> getGlobalClaimHistory();
   Future<ItemModel> updateItem(ItemModel item, {File? newImageFile});
   Future<void> deleteItem(String itemId);
 }
@@ -247,7 +248,28 @@ Future<List<ItemModel>> searchItems({
   }
 }
 
-  @override
+@override
+  Future<List<ClaimHistoryEntryModel>> getGlobalClaimHistory() async {
+    try {
+      final response = await supabaseClient.from('claims').select('''
+        claimed_at,
+        item:items!inner (*, categories(*), locations(*)),
+        claimer:profiles!claims_claimer_id_fkey!inner (*),
+        security_reporter:profiles!claims_reported_by_id_fkey!inner (*)
+      ''').order('claimed_at', ascending: false);
+
+      return (response as List)
+          .map((json) => ClaimHistoryEntryModel.fromJson(json))
+          .toList();
+    } on PostgrestException catch (e) {
+      throw ServerException(message: "Gagal mengambil riwayat: ${e.message}");
+    } catch (e) {
+      print("Error getting global claimed items history: $e");
+      throw ServerException(message: "Gagal mengambil riwayat klaim global: ${e.toString()}");
+    }
+  }
+
+@override
 Future<ItemModel> claimItemViaQr({
   required String qrCodeData, // QR = item_id
   required String claimerId,

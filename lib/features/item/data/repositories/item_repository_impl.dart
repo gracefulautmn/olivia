@@ -1,27 +1,24 @@
 import 'dart:io';
 import 'package:dartz/dartz.dart';
-import 'package:olivia/core/errors/exceptions.dart' as core_exceptions;
 import 'package:olivia/core/errors/exceptions.dart';
 import 'package:olivia/core/errors/failures.dart';
+// import 'package:olivia/core/network/network_info.dart'; // Aktifkan jika Anda menggunakan network check
+import 'package:olivia/features/history/domain/entities/claim_history_entry.dart';
 import 'package:olivia/features/item/data/datasources/item_remote_data_source.dart';
 import 'package:olivia/features/item/data/models/item_model.dart';
 import 'package:olivia/features/item/domain/entities/item.dart';
 import 'package:olivia/features/item/domain/repositories/item_repository.dart';
-// import 'package:olivia/core/network/network_info.dart'; // Jika digunakan
-import 'package:supabase_flutter/supabase_flutter.dart'; // Untuk akses SupabaseClient jika perlu (misal upload gambar)
 
+// Asumsi Anda mendaftarkan ini di service_locator
 class ItemRepositoryImpl implements ItemRepository {
   final ItemRemoteDataSource remoteDataSource;
-  // final NetworkInfo networkInfo;
-  final SupabaseClient
-  supabaseClient; // Untuk upload gambar jika dipisah dari datasource
+  // final NetworkInfo networkInfo; // Anda bisa mengaktifkan ini kembali jika diperlukan
 
   ItemRepositoryImpl({
     required this.remoteDataSource,
     // required this.networkInfo,
-    required this.supabaseClient, // DI untuk SupabaseClient
   });
-
+  
   @override
   Future<Either<Failure, ItemEntity>> reportItem({
     required String reporterId,
@@ -34,7 +31,6 @@ class ItemRepositoryImpl implements ItemRepository {
     double? latitude,
     double? longitude,
   }) async {
-    // if (await networkInfo.isConnected) {
     try {
       final itemModel = await remoteDataSource.reportItem(
         reporterId: reporterId,
@@ -49,37 +45,33 @@ class ItemRepositoryImpl implements ItemRepository {
       );
       return Right(itemModel);
     } on ServerException catch (e) {
+      // PERBAIKAN: Menggunakan parameter posisional
       return Left(ServerFailure(e.message));
-    // ignore: dead_code_on_catch_subtype
-    } on core_exceptions.AuthException catch (e) {
-      // Jika ada error auth spesifik
+    } on AuthException catch (e) {
+      // PERBAIKAN: Menggunakan parameter posisional
       return Left(AuthFailure(e.message));
     } catch (e) {
+      // PERBAIKAN: Menggunakan parameter posisional
       return Left(
         UnknownFailure("An unexpected error occurred: ${e.toString()}"),
       );
     }
-    // } else {
-    //   return Left(NetworkFailure("No internet connection"));
-    // }
   }
 
   @override
   Future<Either<Failure, ItemEntity>> getItemDetails(String itemId) async {
-    // if (await networkInfo.isConnected) {
     try {
       final itemModel = await remoteDataSource.getItemDetails(itemId);
       return Right(itemModel);
     } on ServerException catch (e) {
+      // PERBAIKAN: Menggunakan parameter posisional
       return Left(ServerFailure(e.message));
     } catch (e) {
+      // PERBAIKAN: Menggunakan parameter posisional
       return Left(
         UnknownFailure("An unexpected error occurred: ${e.toString()}"),
       );
     }
-    // } else {
-    //   return Left(NetworkFailure("No internet connection"));
-    // }
   }
 
   @override
@@ -92,7 +84,6 @@ class ItemRepositoryImpl implements ItemRepository {
     int? limit,
     int? offset,
   }) async {
-    // if (await networkInfo.isConnected) {
     try {
       final itemModels = await remoteDataSource.searchItems(
         query: query,
@@ -105,15 +96,14 @@ class ItemRepositoryImpl implements ItemRepository {
       );
       return Right(itemModels);
     } on ServerException catch (e) {
+      // PERBAIKAN: Menggunakan parameter posisional
       return Left(ServerFailure(e.message));
     } catch (e) {
+      // PERBAIKAN: Menggunakan parameter posisional
       return Left(
         UnknownFailure("An unexpected error occurred: ${e.toString()}"),
       );
     }
-    // } else {
-    //   return Left(NetworkFailure("No internet connection"));
-    // }
   }
 
   @override
@@ -121,75 +111,35 @@ class ItemRepositoryImpl implements ItemRepository {
     required String qrCodeData,
     required String claimerId,
   }) async {
-    // if (await networkInfo.isConnected) {
     try {
       final itemModel = await remoteDataSource.claimItemViaQr(
         qrCodeData: qrCodeData,
         claimerId: claimerId,
       );
-      // Di sini Anda bisa memicu pembuatan notifikasi untuk si penemu (reporter)
-      // _sendClaimNotification(itemModel.reporterId, itemModel.itemName, claimerId);
       return Right(itemModel);
     } on ServerException catch (e) {
+      // PERBAIKAN: Menggunakan parameter posisional
       return Left(ServerFailure(e.message));
     } catch (e) {
+      // PERBAIKAN: Menggunakan parameter posisional
       return Left(
         UnknownFailure("An unexpected error occurred: ${e.toString()}"),
       );
     }
-    // } else {
-    //   return Left(NetworkFailure("No internet connection"));
-    // }
   }
-
+  
   @override
-  Future<Either<Failure, List<ItemEntity>>> getClaimedItemsHistory({
-    required String userId,
-    bool asClaimer = true,
-  }) async {
-    // if (await networkInfo.isConnected) {
+  Future<Either<Failure, List<ClaimHistoryEntry>>> getGlobalClaimHistory() async {
     try {
-      final itemModels = await remoteDataSource.getClaimedItemsHistory(
-        userId: userId,
-        asClaimer: asClaimer,
-      );
-      return Right(itemModels);
+      final historyModels = await remoteDataSource.getGlobalClaimHistory();
+      return Right(historyModels);
     } on ServerException catch (e) {
+      // PERBAIKAN: Menggunakan parameter posisional
       return Left(ServerFailure(e.message));
     } catch (e) {
-      return Left(
-        UnknownFailure("An unexpected error occurred: ${e.toString()}"),
-      );
+      // PERBAIKAN: Menggunakan parameter posisional
+      return Left(UnknownFailure("Gagal mengambil riwayat global: ${e.toString()}"));
     }
-    // } else {
-    //   return Left(NetworkFailure("No internet connection"));
-    // }
-  }
-
-  @override
-  Future<Either<Failure, ItemEntity>> updateItemStatus({
-    required String itemId,
-    required String newStatus,
-    String? claimerId,
-  }) async {
-    // if (await networkInfo.isConnected) {
-    try {
-      final itemModel = await remoteDataSource.updateItemStatus(
-        itemId: itemId,
-        newStatus: newStatus,
-        claimerId: claimerId,
-      );
-      return Right(itemModel);
-    } on ServerException catch (e) {
-      return Left(ServerFailure(e.message));
-    } catch (e) {
-      return Left(
-        UnknownFailure("An unexpected error occurred: ${e.toString()}"),
-      );
-    }
-    // } else {
-    //   return Left(NetworkFailure("No internet connection"));
-    // }
   }
 
   @override
@@ -197,60 +147,38 @@ class ItemRepositoryImpl implements ItemRepository {
     ItemEntity item, {
     File? newImageFile,
   }) async {
-    // if (await networkInfo.isConnected) {
     try {
-      // Pastikan item adalah ItemModel atau konversi jika perlu
       final itemModel =
-          item is ItemModel
-              ? item
-              : ItemModel(
-                id: item.id,
-                reporterId: item.reporterId,
-                itemName: item.itemName,
-                description: item.description,
-                categoryId: item.categoryId,
-                locationId: item.locationId,
-                reportType: item.reportType,
-                status: item.status,
-                imageUrl: item.imageUrl,
-                qrCodeData: item.qrCodeData,
-                reportedAt: item.reportedAt,
-                updatedAt: item.updatedAt,
-                latitude: item.latitude,
-                longitude: item.longitude,
-              );
+          item is ItemModel ? item : ItemModel.fromEntity(item);
       final updatedItemModel = await remoteDataSource.updateItem(
         itemModel,
         newImageFile: newImageFile,
       );
       return Right(updatedItemModel);
     } on ServerException catch (e) {
+      // PERBAIKAN: Menggunakan parameter posisional
       return Left(ServerFailure(e.message));
     } catch (e) {
+      // PERBAIKAN: Menggunakan parameter posisional
       return Left(
         UnknownFailure("An unexpected error occurred: ${e.toString()}"),
       );
     }
-    // } else {
-    //   return Left(NetworkFailure("No internet connection"));
-    // }
   }
 
   @override
   Future<Either<Failure, void>> deleteItem(String itemId) async {
-    // if (await networkInfo.isConnected) {
     try {
       await remoteDataSource.deleteItem(itemId);
       return const Right(null);
     } on ServerException catch (e) {
+      // PERBAIKAN: Menggunakan parameter posisional
       return Left(ServerFailure(e.message));
     } catch (e) {
+      // PERBAIKAN: Menggunakan parameter posisional
       return Left(
         UnknownFailure("An unexpected error occurred: ${e.toString()}"),
       );
     }
-    // } else {
-    //   return Left(NetworkFailure("No internet connection"));
-    // }
   }
 }
