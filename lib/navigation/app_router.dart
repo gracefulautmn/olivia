@@ -16,6 +16,7 @@ import 'package:olivia/features/item/presentation/pages/search_results_page.dart
 import 'package:olivia/features/notification/presentation/pages/notification_page.dart';
 import 'package:olivia/features/profile/presentation/pages/profile_page.dart'; // Pastikan ini diimpor
 import 'package:olivia/navigation/main_navigation_scaffold.dart';
+import 'package:olivia/features/feedback/presentation/pages/feedback_page.dart';
 
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'root');
 final GlobalKey<NavigatorState> _shellNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'shell');
@@ -133,24 +134,24 @@ class AppRouter {
           builder: (context, state) {
             final query = state.uri.queryParameters['query'];
             final categoryId = state.uri.queryParameters['categoryId'];
-            final categoryName = state.uri.queryParameters['categoryName'];
             final locationId = state.uri.queryParameters['locationId'];
-            final locationName = state.uri.queryParameters['locationName'];
-            final reportType = state.uri.queryParameters['reportType'];
             return SearchResultsPage(
               initialQuery: query,
               categoryId: categoryId,
-              categoryName: categoryName,
               locationId: locationId,
-              locationName: locationName,
-              reportType: reportType,
             );
           },
         ),
+        // GoRoute(
+        //   path: ChatListPage.routeName,
+        //   name: ChatListPage.routeName,
+        //   builder: (context, state) => const ChatListPage(),
+        // ),
         GoRoute(
-          path: ChatListPage.routeName,
-          name: ChatListPage.routeName,
-          builder: (context, state) => const ChatListPage(),
+          path: FeedbackPage.routeName,
+          name: FeedbackPage.routeName,
+          parentNavigatorKey: _rootNavigatorKey, // Tampil di atas shell
+          builder: (context, state) => const FeedbackPage(),
         ),
         GoRoute(
           path: ChatDetailPage.routeName,

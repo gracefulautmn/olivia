@@ -160,7 +160,7 @@ class ItemDetailPage extends StatelessWidget {
           children: [
             Chip(
               label: Text(
-                item.reportType == ReportType.penemuan ? 'Ditemukan' : 'Hilang',
+                item.reportType == ReportType.penemuan ? 'Penemuan' : 'Kehilangan',
                 style: const TextStyle(color: Colors.white),
               ),
               backgroundColor:
@@ -169,25 +169,25 @@ class ItemDetailPage extends StatelessWidget {
                       : Colors.orange,
             ),
             const SizedBox(width: 8),
-            Chip(
-              label: Text(
-                item.status == ItemStatus.ditemukan_tersedia
-                    ? 'Tersedia'
-                    : item.status == ItemStatus.ditemukan_diklaim
-                    ? 'Sudah Diklaim'
-                    : 'Masih Hilang',
-                style: TextStyle(
-                  color:
-                      item.status == ItemStatus.ditemukan_diklaim
-                          ? Colors.white
-                          : Colors.black87,
-                ),
-              ),
-              backgroundColor:
-                  item.status == ItemStatus.ditemukan_diklaim
-                      ? Colors.redAccent
-                      : Colors.grey[300],
-            ),
+            // Chip(
+            //   label: Text(
+            //     item.status == ItemStatus.ditemukan_tersedia
+            //         ? 'Tersedia'
+            //         : item.status == ItemStatus.ditemukan_diklaim
+            //         ? 'Sudah Diklaim'
+            //         : 'Masih Hilang',
+            //     style: TextStyle(
+            //       color:
+            //           item.status == ItemStatus.ditemukan_diklaim
+            //               ? Colors.white
+            //               : Colors.black87,
+            //     ),
+            //   ),
+            //   backgroundColor:
+            //       item.status == ItemStatus.ditemukan_diklaim
+            //           ? Colors.redAccent
+            //           : Colors.grey[300],
+            // ),
           ],
         ),
         const SizedBox(height: 16),
@@ -212,7 +212,7 @@ class ItemDetailPage extends StatelessWidget {
         _buildDetailRow(
           Icons.calendar_today_outlined,
           'Tanggal Lapor',
-          DateFormat('dd MMM yyyy, HH:mm').format(item.reportedAt),
+          DateFormat('dd MMM yyyy, HH:mm').format(item.reportedAt!),
         ),
 
         if (item.description != null && item.description!.isNotEmpty) ...[

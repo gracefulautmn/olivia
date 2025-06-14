@@ -24,6 +24,7 @@ abstract class ItemRepository {
     String? categoryId,
     String? locationId,
     String? reportType,
+    String? reporterId,
     String? status,
     int? limit,
     int? offset,

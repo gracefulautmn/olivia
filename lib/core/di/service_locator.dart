@@ -1,5 +1,10 @@
 import 'package:get_it/get_it.dart';
 import 'package:internet_connection_checker_plus/internet_connection_checker_plus.dart';
+import 'package:olivia/features/feedback/data/datasources/feedback_remote_datasource.dart';
+import 'package:olivia/features/feedback/data/repositories/feedback_repository_impl.dart';
+import 'package:olivia/features/feedback/domain/repositories/feedback_repository.dart';
+import 'package:olivia/features/feedback/domain/usecases/submit_feedback.dart';
+import 'package:olivia/features/feedback/presentation/bloc/feedback_bloc.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 // Core & Utils (jika ada NetworkInfo)
@@ -119,8 +124,7 @@ Future<void> init() async {
   sl.registerFactory(() => HomeBloc(
         getCategoriesUseCase: sl(),
         getLocationsUseCase: sl(),
-        getRecentFoundItemsUseCase: sl(),
-        getRecentLostItemsUseCase: sl(),
+        searchItemsUseCase: sl(),
       ));
 
   // Use Cases
@@ -238,4 +242,18 @@ Future<void> init() async {
       () => ChatRepositoryImpl(remoteDataSource: sl()));
   sl.registerLazySingleton<ChatRemoteDataSource>(
       () => ChatRemoteDataSourceImpl(supabaseClient: sl()));
+  
+  // ===================================================================
+  //                       FITUR FEEDBACK (BARU)
+  // ===================================================================
+  // BLoC
+  sl.registerFactory(() => FeedbackBloc(sl()));
+
+  // Use Case
+  sl.registerLazySingleton(() => SubmitFeedback(sl()));
+
+  // Repository & DataSource
+  sl.registerLazySingleton<FeedbackRepository>(() => FeedbackRepositoryImpl(remoteDataSource: sl()));
+  sl.registerLazySingleton<FeedbackRemoteDataSource>(() => FeedbackRemoteDataSourceImpl(supabaseClient: sl()));
+
 }

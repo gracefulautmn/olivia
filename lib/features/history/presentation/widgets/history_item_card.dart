@@ -134,7 +134,7 @@ class HistoryItemCard extends StatelessWidget {
                  _buildHistoryDetailRow(
                     icon: Icons.report_outlined,
                     label: 'Anda Laporkan Pada',
-                    value: DateFormat('dd MMM yyyy, HH:mm').format(item.reportedAt),
+                    value: DateFormat('dd MMM yyyy, HH:mm').format(item.reportedAt!),
                   ),
               ],
             ],

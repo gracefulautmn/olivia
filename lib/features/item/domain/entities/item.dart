@@ -8,48 +8,48 @@ class ItemEntity extends Equatable {
   final String id;
   final String reporterId;
   final String itemName;
+  final ReportType reportType;
+  final ItemStatus status;
+  // PERBAIKAN: Ubah menjadi nullable DateTime?
+  final DateTime? reportedAt;
+  final DateTime? updatedAt;
+  final DateTime? claimedAt;
+
+  // Field opsional
   final String? description;
   final String? categoryId;
   final String? locationId;
-  final ReportType reportType;
-  final ItemStatus status;
   final String? imageUrl;
   final String? qrCodeData;
-  final DateTime reportedAt;
-  final DateTime? updatedAt;
   final double? latitude;
   final double? longitude;
 
-  final UserProfile? reporterProfile;
+  // Data dari relasi (join)
   final CategoryEntity? category;
   final LocationEntity? location;
-
-  // Tambahan untuk informasi klaim (dari tabel claims)
-  final UserProfile? claimerProfile; // Profil pengguna yang mengklaim
-  final DateTime? claimedAt;        // Waktu barang diklaim
-  final String? claimId;            // ID dari tabel claims (opsional)
+  final UserProfile? reporterProfile;
+  final UserProfile? claimerProfile;
 
   const ItemEntity({
     required this.id,
     required this.reporterId,
     required this.itemName,
+    required this.reportType,
+    required this.status,
+    this.reportedAt, // Sekarang bisa null
+    this.updatedAt,  // Sekarang bisa null
+    this.claimedAt,
     this.description,
     this.categoryId,
     this.locationId,
-    required this.reportType,
-    required this.status,
     this.imageUrl,
     this.qrCodeData,
-    required this.reportedAt,
-    this.updatedAt,
     this.latitude,
     this.longitude,
-    this.reporterProfile,
     this.category,
     this.location,
-    this.claimerProfile, // Tambahkan di constructor
-    this.claimedAt,      // Tambahkan di constructor
-    this.claimId,        // Tambahkan di constructor
+    this.reporterProfile,
+    this.claimerProfile,
   });
 
   @override
@@ -57,22 +57,17 @@ class ItemEntity extends Equatable {
         id,
         reporterId,
         itemName,
+        reportType,
+        status,
+        reportedAt,
+        updatedAt,
+        claimedAt,
         description,
         categoryId,
         locationId,
-        reportType,
-        status,
         imageUrl,
         qrCodeData,
-        reportedAt,
-        updatedAt,
-        latitude,
-        longitude,
         reporterProfile,
-        category,
-        location,
-        claimerProfile, // Tambahkan ke props
-        claimedAt,      // Tambahkan ke props
-        claimId,        // Tambahkan ke props
+        claimerProfile,
       ];
 }

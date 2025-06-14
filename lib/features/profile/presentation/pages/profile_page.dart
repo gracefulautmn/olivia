@@ -242,43 +242,12 @@ class ProfilePage extends StatelessWidget {
         const SizedBox(height: 24),
         const Divider(),
 
-        // Form Edit (Nama dan Jurusan jika mahasiswa)
-        // _buildEditableField(
-        //   context: context,
-        //   label: 'Nama Lengkap',
-        //   initialValue: profileState.currentFullName,
-        //   icon: Icons.person_outline,
-        //   onChanged:
-        //       (value) => context.read<ProfileBloc>().add(
-        //         ProfileFullNameChanged(value),
-        //       ),
-        //   validator: (value) {
-        //     if (value == null || value.isEmpty)
-        //       return 'Nama tidak boleh kosong';
-        //     return null;
-        //   },
-        // ),
         _buildInfoRow(
           Icons.person_outline,
           'Nama Lengkap',
           user.fullName,
         ),
-
-        // if (isStudent)
-        //   _buildEditableField(
-        //     context: context,
-        //     label: 'Jurusan',
-        //     initialValue: profileState.currentMajor,
-        //     icon: Icons.school_outlined,
-        //     onChanged:
-        //         (value) =>
-        //             context.read<ProfileBloc>().add(ProfileMajorChanged(value)),
-            // validator: (value) {
-            //   if (value == null || value.isEmpty) return 'Jurusan tidak boleh kosong';
-            //   return null;
-            // },
-            // Jurusan bisa opsional jika memang boleh null
-          // ),
+        
          if (isStudent)
           _buildInfoRow(
             Icons.school_outlined,

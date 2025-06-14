@@ -188,32 +188,34 @@ Future<List<ItemModel>> searchItems({
   String? locationId,
   String? reportType,
   String? status,
+  String? reporterId, // Pastikan parameter ini ada di sini
   int? limit = 20,
   int? offset = 0,
 }) async {
   try {
-    final int currentLimit = limit ?? 20;
-    final int currentOffset = offset ?? 0;
-
-    // Start with select to get PostgrestFilterBuilder
     var queryBuilder = supabaseClient
         .from('items')
         .select('*, categories(*), locations(*), profiles!inner(id, full_name, avatar_url)');
 
-    // Apply filters - now we have PostgrestFilterBuilder which has filter methods
     if (reportType != null && reportType.isNotEmpty) {
       queryBuilder = queryBuilder.eq('report_type', reportType);
     }
 
     if (status != null && status.isNotEmpty) {
       queryBuilder = queryBuilder.eq('status', status);
-    } else if (reportType == null || reportType.isEmpty) {
-      // Default status filter if no specific report type or status
+    } else {
       queryBuilder = queryBuilder.inFilter('status', [
-        AppConstants.itemStatusLost,
-        AppConstants.itemStatusFoundAvailable,
+        'hilang', // Menggunakan string langsung atau konstanta
+        'ditemukan_tersedia',
       ]);
     }
+    
+    // ===>>> PERBAIKAN UTAMA ADA DI SINI <<<===
+    // Jika reporterId diberikan, tambahkan filter untuk reporter_id
+    if (reporterId != null && reporterId.isNotEmpty) {
+      queryBuilder = queryBuilder.eq('reporter_id', reporterId);
+    }
+    // ===>>> AKHIR PERBAIKAN <<<===
 
     if (categoryId != null && categoryId.isNotEmpty) {
       queryBuilder = queryBuilder.eq('category_id', categoryId);
@@ -223,15 +225,13 @@ Future<List<ItemModel>> searchItems({
       queryBuilder = queryBuilder.eq('location_id', locationId);
     }
 
-    // Text search on item name and description
     if (query != null && query.isNotEmpty) {
       queryBuilder = queryBuilder.or('item_name.ilike.%$query%,description.ilike.%$query%');
     }
-
-    // Apply ordering and pagination
-    final List<Map<String, dynamic>> response = await queryBuilder
+    
+    final response = await queryBuilder
         .order('reported_at', ascending: false)
-        .range(currentOffset, currentOffset + currentLimit - 1);
+        .range(offset ?? 0, (offset ?? 0) + (limit ?? 20) - 1);
 
     return response
         .map((itemJson) => ItemModel.fromJson(itemJson))
@@ -242,11 +242,11 @@ Future<List<ItemModel>> searchItems({
       print("Postgrest error searching items: ${e.message}, Code: ${e.code}");
       throw ServerException(message: "Gagal mencari barang (DB Error): ${e.message}");
     }
-    if (e is ServerException) rethrow;
     print("General error searching items: $e");
     throw ServerException(message: "Gagal mencari barang: ${e.toString()}");
   }
 }
+
 
 @override
   Future<List<ClaimHistoryEntryModel>> getGlobalClaimHistory() async {

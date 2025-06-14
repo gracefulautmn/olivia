@@ -14,7 +14,8 @@ class LoginUser implements UseCase<UserProfile, LoginParams> {
   Future<Either<Failure, UserProfile>> call(LoginParams params) async {
     // Tambahkan validasi email di sini jika perlu, atau di BLoC/Page
     if (!params.email.endsWith('@student.universitaspertamina.ac.id') &&
-        !params.email.endsWith('@universitaspertamina.ac.id')) {
+        !params.email.endsWith('@universitaspertamina.ac.id') && 
+        !params.email.endsWith('@security.universitaspertamina.ac.id')) {
       return Left(
         InputValidationFailure(
           'Email harus menggunakan domain universitaspertamina.ac.id',

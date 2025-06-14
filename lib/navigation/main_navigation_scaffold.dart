@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:olivia/core/utils/app_colors.dart';
+import 'package:olivia/features/chat/presentation/pages/chat_detail_page.dart';
 import 'package:olivia/features/chat/presentation/pages/chat_list_page.dart';
+import 'package:olivia/features/feedback/presentation/pages/feedback_page.dart';
 import 'package:olivia/features/history/presentation/pages/history_page.dart';
 import 'package:olivia/features/home/presentation/pages/home_page.dart';
 import 'package:olivia/features/item/presentation/pages/report_item_page.dart';
@@ -112,20 +114,12 @@ class _MainNavigationScaffoldState extends State<MainNavigationScaffold> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          // Navigasi ke halaman daftar chat
-          // Pastikan ChatListPage.routeName sudah didefinisikan di AppRouter
-          // dan tidak berada di dalam ShellRoute ini (agar tidak ada double bottom nav)
-          context.push(ChatListPage.routeName);
-        },
-        backgroundColor: AppColors.secondaryColor, // Atau warna lain yang sesuai
-        foregroundColor: Colors.white,
-        elevation: 4.0,
-        tooltip: 'Obrolan',
-        child: const Icon(Icons.chat_bubble_outline),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat, // Posisi FAB
+      // floatingActionButton: FloatingActionButton(
+      // onPressed: () => _showSupportOptions(context),
+      // backgroundColor: Theme.of(context).primaryColor,
+      // child: const Icon(Icons.support_agent_outlined, color: Colors.white),
+      // ),
+      // floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
     );
   }
 }

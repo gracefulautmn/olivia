@@ -11,15 +11,17 @@ class CategoriesListWidget extends StatelessWidget {
   // Contoh mapping ikon sederhana, idealnya dari backend atau enum
   IconData _getIconForCategory(String categoryName) {
     switch (categoryName.toLowerCase()) {
-      case 'elektronik':
+      case 'Elektronik':
         return Icons.devices;
-      case 'kunci':
+      case 'Kunci':
         return Icons.vpn_key_outlined;
-      case 'dompet & kartu':
+      case 'Dompet':
         return Icons.account_balance_wallet_outlined;
+      case 'Dokumen':
+        return Icons.description_outlined;
       case 'buku & catatan':
         return Icons.book_outlined;
-      case 'pakaian':
+      case 'Pakaian':
         return Icons.style_outlined;
       default:
         return Icons.category_outlined;

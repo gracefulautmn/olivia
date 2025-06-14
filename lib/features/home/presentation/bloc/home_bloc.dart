@@ -1,14 +1,17 @@
 import 'package:bloc/bloc.dart';
+import 'package:dartz/dartz.dart';
 import 'package:equatable/equatable.dart';
 import 'package:olivia/core/errors/failures.dart';
 import 'package:olivia/core/usecases/usecase.dart';
+import 'package:olivia/core/utils/enums.dart'; // Pastikan enum ItemStatus dan ReportType ada di sini
 import 'package:olivia/features/home/domain/entities/category.dart';
 import 'package:olivia/features/home/domain/entities/item_preview.dart';
 import 'package:olivia/features/home/domain/entities/location.dart';
 import 'package:olivia/features/home/domain/usecases/get_categories.dart';
 import 'package:olivia/features/home/domain/usecases/get_locations.dart';
-import 'package:olivia/features/home/domain/usecases/get_recent_found_items.dart';
-import 'package:olivia/features/home/domain/usecases/get_recent_lost_items.dart';
+import 'package:olivia/features/item/domain/entities/item.dart';
+// PERBAIKAN: Menggunakan use case SearchItems yang lebih fleksibel
+import 'package:olivia/features/item/domain/usecases/search_items.dart';
 
 part 'home_event.dart';
 part 'home_state.dart';
@@ -16,14 +19,13 @@ part 'home_state.dart';
 class HomeBloc extends Bloc<HomeEvent, HomeState> {
   final GetCategories getCategoriesUseCase;
   final GetLocations getLocationsUseCase;
-  final GetRecentFoundItems getRecentFoundItemsUseCase;
-  final GetRecentLostItems getRecentLostItemsUseCase;
+  // PERBAIKAN: Mengganti use case spesifik dengan yang lebih umum
+  final SearchItems searchItemsUseCase;
 
   HomeBloc({
     required this.getCategoriesUseCase,
     required this.getLocationsUseCase,
-    required this.getRecentFoundItemsUseCase,
-    required this.getRecentLostItemsUseCase,
+    required this.searchItemsUseCase, // Menggunakan dependensi baru
   }) : super(HomeInitial()) {
     on<FetchHomeData>(_onFetchHomeData);
   }
@@ -34,70 +36,97 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
   ) async {
     emit(HomeLoading());
     try {
-      final categoriesResult = await getCategoriesUseCase(NoParams());
-      final locationsResult = await getLocationsUseCase(NoParams());
-      final recentFoundItemsResult = await getRecentFoundItemsUseCase(
-        const GetRecentItemsParams(limit: 6),
-      );
-      final recentLostItemsResult = await getRecentLostItemsUseCase(
-        const GetRecentItemsParams(limit: 6),
-      );
+      // Mengambil data secara paralel
+      final results = await Future.wait([
+        getCategoriesUseCase(NoParams()),
+        getLocationsUseCase(NoParams()),
+        // PERBAIKAN: Memanggil searchItems dengan reportType DAN status yang benar
+        searchItemsUseCase(const SearchItemsParams(
+          reportType: 'penemuan',
+          status: 'ditemukan_tersedia', // Hanya ambil yang tersedia
+          limit: 6,
+        )),
+        // PERBAIKAN: Memanggil searchItems dengan reportType DAN status yang benar
+        searchItemsUseCase(const SearchItemsParams(
+          reportType: 'kehilangan',
+          status: 'hilang', // Hanya ambil yang masih hilang
+          limit: 6,
+        )),
+      ]);
 
-      // Menggunakan fold untuk menangani Either
+      // Mengekstrak hasil dan menangani error
+      final categoriesResult = results[0] as Either<Failure, List<CategoryEntity>>;
+      final locationsResult = results[1] as Either<Failure, List<LocationEntity>>;
+      // PERBAIKAN: ItemEntity dari SearchItems perlu di-map ke ItemPreviewEntity
+      final recentFoundItemsResult = results[2] as Either<Failure, List<ItemEntity>>;
+      final recentLostItemsResult = results[3] as Either<Failure, List<ItemEntity>>;
+
+      // Fungsi helper untuk memeriksa kegagalan
       Failure? anyFailure;
-      List<CategoryEntity> categories = [];
-      List<LocationEntity> locations = [];
-      List<ItemPreviewEntity> recentFoundItems = [];
-      List<ItemPreviewEntity> recentLostItems = [];
-
-      categoriesResult.fold(
-        (failure) => anyFailure = failure,
-        (data) => categories = data,
-      );
+      T? extractData<T>(Either<Failure, T> result) {
+        T? data;
+        result.fold(
+          (failure) => anyFailure = failure,
+          (d) => data = d,
+        );
+        return data;
+      }
+      
+      final categories = extractData(categoriesResult);
       if (anyFailure != null) {
         emit(HomeError(anyFailure!.message));
         return;
       }
 
-      locationsResult.fold(
-        (failure) => anyFailure = failure,
-        (data) => locations = data,
-      );
+      final locations = extractData(locationsResult);
+      if (anyFailure != null) {
+        emit(HomeError(anyFailure!.message));
+        return;
+      }
+      
+      final recentFoundItemsEntities = extractData(recentFoundItemsResult);
       if (anyFailure != null) {
         emit(HomeError(anyFailure!.message));
         return;
       }
 
-      recentFoundItemsResult.fold(
-        (failure) => anyFailure = failure, // Bisa juga di-collect semua error
-        (data) => recentFoundItems = data,
-      );
+      final recentLostItemsEntities = extractData(recentLostItemsResult);
       if (anyFailure != null) {
-        // Bisa jadi beberapa data berhasil, beberapa gagal. Handle sesuai kebutuhan.
-        // Untuk sekarang, jika ada satu gagal, tampilkan error.
         emit(HomeError(anyFailure!.message));
         return;
       }
 
-      recentLostItemsResult.fold(
-        (failure) => anyFailure = failure,
-        (data) => recentLostItems = data,
-      );
-      if (anyFailure != null) {
-        emit(HomeError(anyFailure!.message));
-        return;
-      }
+      // Konversi dari ItemEntity ke ItemPreviewEntity
+      final recentFoundItems = recentFoundItemsEntities?.map((item) => ItemPreviewEntity.fromItemEntity(item)).toList() ?? [];
+      final recentLostItems = recentLostItemsEntities?.map((item) => ItemPreviewEntity.fromItemEntity(item)).toList() ?? [];
 
       emit(
         HomeLoaded(
-          categories: categories,
-          locations: locations,
+          categories: categories ?? [],
+          locations: locations ?? [],
           recentFoundItems: recentFoundItems,
           recentLostItems: recentLostItems,
         ),
       );
+
     } catch (e) {
       emit(HomeError("An unexpected error occurred: ${e.toString()}"));
     }
   }
 }
+
+// Anda perlu menambahkan factory constructor ini ke kelas ItemPreviewEntity Anda
+// agar bisa melakukan konversi dari ItemEntity.
+// Contoh di file: lib/features/home/domain/entities/item_preview.dart
+/*
+factory ItemPreviewEntity.fromItemEntity(ItemEntity item) {
+  return ItemPreviewEntity(
+    id: item.id,
+    itemName: item.itemName,
+    imageUrl: item.imageUrl,
+    reportType: item.reportType,
+    categoryName: item.category?.name,
+    locationName: item.location?.name,
+  );
+}
+*/

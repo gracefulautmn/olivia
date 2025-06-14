@@ -47,7 +47,7 @@ class LocationsListWidget extends StatelessWidget {
             bottom: 8.0,
           ), // Tambah top padding
           child: Text(
-            'Lokasi Populer',
+            'Lokasi Penemuan',
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
         ),

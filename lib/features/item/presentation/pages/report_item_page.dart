@@ -4,14 +4,13 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:olivia/core/di/service_locator.dart';
-import 'package:olivia/core/utils/app_colors.dart';
 import 'package:olivia/core/utils/enums.dart';
 import 'package:olivia/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:olivia/features/home/domain/entities/category.dart';
 import 'package:olivia/features/home/domain/entities/location.dart';
 import 'package:olivia/features/item/presentation/bloc/report_item/report_item_bloc.dart';
-import 'package:olivia/common_widgets/custom_button.dart'; // Asumsi ada widget ini
-import 'package:olivia/common_widgets/loading_indicator.dart'; // Asumsi ada widget ini
+import 'package:olivia/common_widgets/custom_button.dart';
+import 'package:olivia/common_widgets/loading_indicator.dart';
 import 'package:olivia/navigation/main_navigation_scaffold.dart';
 
 class ReportItemPage extends StatelessWidget {
@@ -21,11 +20,20 @@ class ReportItemPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final authState = context.read<AuthBloc>().state;
+    final bool isSecurity = authState.user?.role == UserRole.keamanan;
+    // Tentukan jenis laporan dan judul halaman berdasarkan peran
+    final ReportType reportType =
+        isSecurity ? ReportType.penemuan : ReportType.kehilangan;
+    final String pageTitle =
+        isSecurity ? 'Lapor Barang Temuan' : 'Lapor Barang Hilang';
+
     return BlocProvider(
-      create: (context) => sl<ReportItemBloc>(),
+      create: (context) =>
+          sl<ReportItemBloc>()..add(ReportItemTypeChanged(reportType)),
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Lapor Barang'),
+          title: Text(pageTitle),
           leading: IconButton(
             icon: const Icon(Icons.close),
             onPressed: () => context.go(MainNavigationScaffold.routeName),
@@ -56,14 +64,15 @@ class ReportItemPage extends StatelessWidget {
                     backgroundColor: Colors.green,
                   ),
                 );
-              context.go(MainNavigationScaffold.routeName); // Kembali ke halaman utama (Beranda)
+              context.go(MainNavigationScaffold.routeName);
             }
           },
           builder: (context, state) {
             if (state.status == ReportItemStatus.loadingFormData) {
               return const Center(child: LoadingIndicator());
             }
-            return _ReportItemForm();
+            // Kirim reportType ke form
+            return _ReportItemForm(reportType: reportType);
           },
         ),
       ),
@@ -72,6 +81,9 @@ class ReportItemPage extends StatelessWidget {
 }
 
 class _ReportItemForm extends StatefulWidget {
+  final ReportType reportType;
+  const _ReportItemForm({required this.reportType});
+
   @override
   __ReportItemFormState createState() => __ReportItemFormState();
 }
@@ -85,7 +97,6 @@ class __ReportItemFormState extends State<_ReportItemForm> {
   @override
   void initState() {
     super.initState();
-    // Isi controller jika ada data di state (misal saat edit, tapi ini untuk create)
     final initialState = context.read<ReportItemBloc>().state;
     _itemNameController.text = initialState.itemName;
     _descriptionController.text = initialState.description;
@@ -102,18 +113,19 @@ class __ReportItemFormState extends State<_ReportItemForm> {
     try {
       final XFile? pickedFile = await _picker.pickImage(
         source: source,
-        maxWidth: 800, // Batasi ukuran gambar
-        imageQuality: 85, // Kompresi gambar
+        maxWidth: 800,
+        imageQuality: 85,
       );
-      if (pickedFile != null) {
+      if (pickedFile != null && mounted) {
         context.read<ReportItemBloc>().add(
-          ReportItemImagePicked(File(pickedFile.path)),
-        );
+              ReportItemImagePicked(File(pickedFile.path)),
+            );
       }
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Gagal mengambil gambar: $e')));
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Gagal mengambil gambar: $e')));
+      }
     }
   }
 
@@ -149,8 +161,7 @@ class __ReportItemFormState extends State<_ReportItemForm> {
 
   @override
   Widget build(BuildContext context) {
-    final authState =
-        context.watch<AuthBloc>().state; // Untuk mendapatkan currentUserId
+    final authState = context.watch<AuthBloc>().state;
     final reportBloc = context.watch<ReportItemBloc>();
     final state = reportBloc.state;
 
@@ -161,38 +172,8 @@ class __ReportItemFormState extends State<_ReportItemForm> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
-            // Jenis Laporan (Kehilangan/Penemuan)
-            SegmentedButton<ReportType>(
-              segments: const <ButtonSegment<ReportType>>[
-                ButtonSegment<ReportType>(
-                  value: ReportType.kehilangan,
-                  label: Text('Kehilangan'),
-                  icon: Icon(Icons.search_off),
-                ),
-                ButtonSegment<ReportType>(
-                  value: ReportType.penemuan,
-                  label: Text('Penemuan'),
-                  icon: Icon(Icons.visibility),
-                ),
-              ],
-              selected: <ReportType>{state.reportType},
-              onSelectionChanged: (Set<ReportType> newSelection) {
-                reportBloc.add(ReportItemTypeChanged(newSelection.first));
-              },
-              style: SegmentedButton.styleFrom(
-                selectedBackgroundColor:
-                    state.reportType == ReportType.kehilangan
-                        ? Colors.orange.shade100
-                        : Colors.green.shade100,
-                selectedForegroundColor:
-                    state.reportType == ReportType.kehilangan
-                        ? Colors.orange.shade800
-                        : Colors.green.shade800,
-              ),
-            ),
-            const SizedBox(height: 20),
+            // SegmentedButton sudah dihapus karena logika peran ada di atas
 
-            // Nama Barang
             TextFormField(
               controller: _itemNameController,
               decoration: const InputDecoration(
@@ -206,12 +187,10 @@ class __ReportItemFormState extends State<_ReportItemForm> {
                 }
                 return null;
               },
-              onChanged:
-                  (value) => reportBloc.add(ReportItemNameChanged(value)),
+              onChanged: (value) =>
+                  reportBloc.add(ReportItemNameChanged(value)),
             ),
             const SizedBox(height: 16),
-
-            // Deskripsi
             TextFormField(
               controller: _descriptionController,
               decoration: const InputDecoration(
@@ -221,60 +200,52 @@ class __ReportItemFormState extends State<_ReportItemForm> {
                 alignLabelWithHint: true,
               ),
               maxLines: 3,
-              onChanged:
-                  (value) =>
-                      reportBloc.add(ReportItemDescriptionChanged(value)),
+              onChanged: (value) =>
+                  reportBloc.add(ReportItemDescriptionChanged(value)),
             ),
             const SizedBox(height: 16),
-
-            // Kategori
             DropdownButtonFormField<CategoryEntity>(
               value: state.selectedCategory,
               decoration: InputDecoration(
                 labelText:
-                    'Kategori Barang${state.reportType == ReportType.penemuan ? "*" : ""}', // Wajib jika penemuan
+                    'Kategori Barang${widget.reportType == ReportType.penemuan ? "*" : ""}',
                 border: const OutlineInputBorder(),
                 prefixIcon: const Icon(Icons.category_outlined),
               ),
               hint: const Text('Pilih Kategori'),
-              isExpanded: true,
-              items:
-                  state.categories.map((CategoryEntity category) {
-                    return DropdownMenuItem<CategoryEntity>(
-                      value: category,
-                      child: Text(category.name),
-                    );
-                  }).toList(),
+              items: state.categories.map((CategoryEntity category) {
+                return DropdownMenuItem<CategoryEntity>(
+                  value: category,
+                  child: Text(category.name),
+                );
+              }).toList(),
               onChanged: (CategoryEntity? newValue) {
                 reportBloc.add(ReportItemCategoryChanged(newValue));
               },
               validator: (value) {
-                if (state.reportType == ReportType.penemuan && value == null) {
+                if (widget.reportType == ReportType.penemuan &&
+                    value == null) {
                   return 'Kategori wajib diisi untuk barang temuan';
                 }
                 return null;
               },
             ),
             const SizedBox(height: 16),
-
-            // Lokasi
             DropdownButtonFormField<LocationEntity>(
               value: state.selectedLocation,
               decoration: InputDecoration(
                 labelText:
-                    'Lokasi ${state.reportType == ReportType.penemuan ? "Penemuan*" : "Terakhir Dilihat*"}',
+                    'Lokasi ${widget.reportType == ReportType.penemuan ? "Penemuan*" : "Terakhir Dilihat*"}',
                 border: const OutlineInputBorder(),
                 prefixIcon: const Icon(Icons.location_on_outlined),
               ),
               hint: const Text('Pilih Lokasi'),
-              isExpanded: true,
-              items:
-                  state.locations.map((LocationEntity location) {
-                    return DropdownMenuItem<LocationEntity>(
-                      value: location,
-                      child: Text(location.name),
-                    );
-                  }).toList(),
+              items: state.locations.map((LocationEntity location) {
+                return DropdownMenuItem<LocationEntity>(
+                  value: location,
+                  child: Text(location.name),
+                );
+              }).toList(),
               onChanged: (LocationEntity? newValue) {
                 reportBloc.add(ReportItemLocationChanged(newValue));
               },
@@ -286,10 +257,10 @@ class __ReportItemFormState extends State<_ReportItemForm> {
               },
             ),
             const SizedBox(height: 20),
-
-            // Upload Gambar
+            
+            // PERBAIKAN: Label upload gambar sekarang dinamis
             Text(
-              'Foto Barang (Opsional)',
+              'Foto Barang${widget.reportType == ReportType.penemuan ? "*" : " (Opsional)"}',
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 8),
@@ -301,71 +272,63 @@ class __ReportItemFormState extends State<_ReportItemForm> {
                   border: Border.all(color: Colors.grey),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child:
-                    state.imageFile != null
-                        ? ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: Image.file(
-                            state.imageFile!,
-                            fit: BoxFit.cover,
-                            width: double.infinity,
-                          ),
-                        )
-                        : const Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.add_a_photo_outlined,
-                                size: 40,
-                                color: Colors.grey,
-                              ),
-                              Text('Ketuk untuk menambah foto'),
-                            ],
-                          ),
+                child: state.imageFile != null
+                    ? ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.file(
+                          state.imageFile!,
+                          fit: BoxFit.cover,
+                          width: double.infinity,
                         ),
+                      )
+                    : const Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.add_a_photo_outlined,
+                                size: 40, color: Colors.grey),
+                            Text('Ketuk untuk menambah foto'),
+                          ],
+                        ),
+                      ),
               ),
             ),
             if (state.imageFile != null)
               TextButton.icon(
                 icon: const Icon(Icons.delete_outline, color: Colors.red),
-                label: const Text(
-                  'Hapus Foto',
-                  style: TextStyle(color: Colors.red),
-                ),
-                onPressed:
-                    () => reportBloc.add(const ReportItemImagePicked(null)),
+                label:
+                    const Text('Hapus Foto', style: TextStyle(color: Colors.red)),
+                onPressed: () =>
+                    reportBloc.add(const ReportItemImagePicked(null)),
               ),
             const SizedBox(height: 24),
-
+            
             // Tombol Submit
-            if (state.status == ReportItemStatus.loading)
-              const Center(child: LoadingIndicator())
-            else
-              CustomButton(
-                text: 'Kirim Laporan',
-                onPressed: () {
-                  if (_formKey.currentState!.validate()) {
-                    if (authState.status == AuthStatus.authenticated &&
-                        authState.user != null) {
-                      reportBloc.add(
-                        ReportItemSubmitted(currentUserId: authState.user!.id),
-                      );
-                    } else {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            'Anda harus login untuk membuat laporan.',
-                          ),
-                          backgroundColor: Colors.red,
-                        ),
-                      );
-                    }
-                  }
-                },
-                backgroundColor: AppColors.primaryColor,
-                textColor: Colors.white,
-              ),
+            CustomButton(
+              text: 'Kirim Laporan',
+              isLoading: state.status == ReportItemStatus.loading,
+              onPressed: () {
+                // PERBAIKAN: Tambahkan validasi gambar untuk laporan penemuan
+                final isFormValid = _formKey.currentState?.validate() ?? false;
+                if (!isFormValid) {
+                  return;
+                }
+
+                if (widget.reportType == ReportType.penemuan && state.imageFile == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Foto barang wajib diisi untuk laporan penemuan.'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                  return;
+                }
+
+                if (authState.user != null) {
+                  reportBloc.add(ReportItemSubmitted(currentUserId: authState.user!.id));
+                }
+              },
+            ),
           ],
         ),
       ),

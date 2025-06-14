@@ -2,22 +2,25 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:olivia/core/di/service_locator.dart';
+import 'package:olivia/features/chat/presentation/pages/chat_detail_page.dart';
+import 'package:olivia/features/feedback/presentation/pages/feedback_page.dart';
 import 'package:olivia/features/home/presentation/bloc/home_bloc.dart';
 import 'package:olivia/features/home/presentation/widgets/categories_list_widget.dart';
 import 'package:olivia/features/home/presentation/widgets/items_carousel_widget.dart';
 import 'package:olivia/features/home/presentation/widgets/locations_list_widget.dart';
 import 'package:olivia/features/profile/presentation/pages/profile_page.dart';
-import 'package:olivia/features/item/presentation/pages/search_results_page.dart'; // Untuk pencarian
+import 'package:olivia/features/item/presentation/pages/search_results_page.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
 
-  static const String routeName = '/home'; // Sesuaikan dengan ShellRoute
+  static const String routeName = '/home';
 
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (context) => sl<HomeBloc>()..add(FetchHomeData()),
+      // PERBAIKAN: Bungkus dengan Scaffold di sini untuk menempatkan FAB
       child: Scaffold(
         body: BlocBuilder<HomeBloc, HomeState>(
           builder: (context, state) {
@@ -50,10 +53,10 @@ class HomePage extends StatelessWidget {
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(color: Colors.blue.shade200)),
                             child: const Text(
-                              'Jaga barang bawaan Anda dengan baik. Kehilangan dapat merepotkan!',
+                              'Jaga barang bawaan Anda dengan baik !',
                               textAlign: TextAlign.center,
-                              style: TextStyle(
-                                  fontSize: 15, color: Colors.blueGrey),
+                              style:
+                                  TextStyle(fontSize: 15, color: Colors.blueGrey),
                             ),
                           ),
                           LocationsListWidget(locations: state.locations),
@@ -69,19 +72,10 @@ class HomePage extends StatelessWidget {
                                 );
                               },
                             ),
-                          if (state.recentLostItems.isNotEmpty)
-                            ItemsCarouselWidget(
-                              title: 'Laporan Kehilangan Terbaru',
-                              items: state.recentLostItems,
-                              onSeeAll: () {
-                                context.pushNamed(
-                                  SearchResultsPage.routeName,
-                                  queryParameters: {'reportType': 'kehilangan'},
-                                );
-                              },
-                            ),
-                          const SizedBox(
-                              height: 80), // Space untuk floating chat button
+                          // Laporan Kehilangan tidak lagi ditampilkan sesuai revisi sebelumnya
+                          // if (state.recentLostItems.isNotEmpty) ...
+                          
+                          const SizedBox(height: 80), // Space untuk FAB
                         ],
                       ),
                     ),
@@ -93,56 +87,87 @@ class HomePage extends StatelessWidget {
                 child: Text('Selamat datang! Sedang memuat data...'));
           },
         ),
+        // PERBAIKAN: FAB sekarang menjadi bagian dari Scaffold HomePage
+        floatingActionButton: FloatingActionButton(
+          onPressed: () => _showSupportOptions(context),
+          backgroundColor: Theme.of(context).primaryColor,
+          child: const Icon(Icons.support_agent_outlined, color: Colors.white),
+        ),
+        // PENTING: Gunakan FloatingActionButtonLocation yang sesuai jika tidak ada BottomAppBar
+        floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       ),
     );
   }
 
+  // --- Fungsi helper dipindahkan ke dalam HomePage ---
+
+  void _showSupportOptions(BuildContext context) {
+    const String securityUserId = 'af7321dd-7ce2-4112-999e-0b88edad8d0d';
+    const String securityUserName = 'Keamanan';
+
+    showModalBottomSheet(
+      context: context,
+      builder: (ctx) {
+        return SafeArea(
+          child: Wrap(
+            children: <Widget>[
+              ListTile(
+                leading: const Icon(Icons.feedback_outlined),
+                title: const Text('Lapor Bug / Beri Masukan Aplikasi'),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  context.pushNamed(FeedbackPage.routeName);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.security_outlined),
+                title: const Text('Hubungi Keamanan'),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  context.pushNamed(
+                    ChatDetailPage.routeName,
+                    pathParameters: {'chatRoomId': 'new'},
+                    queryParameters: {
+                      'recipientId': securityUserId,
+                      'recipientName': securityUserName,
+                    },
+                  );
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildHeaderWithOverlay(BuildContext context) {
-    const double headerHeight = 230.0; // Sedikit ditambah untuk ruang gradasi
-    const double borderRadiusValue = 25.0; // Nilai radius untuk lengkungan
+    const double headerHeight = 230.0;
+    const double borderRadiusValue = 25.0;
 
     return Stack(
       children: <Widget>[
-        // 1. Gambar Iklan sebagai background
         Container(
           height: headerHeight,
           width: double.infinity,
           decoration: const BoxDecoration(
-            // Lengkungan hanya di bagian bawah
             borderRadius: BorderRadius.vertical(
                 bottom: Radius.circular(borderRadiusValue)),
             image: DecorationImage(
-              image: AssetImage('assets/baranghilang.png'), // Pastikan path ini benar
+              image: AssetImage('assets/baranghilang.png'),
               fit: BoxFit.cover,
             ),
           ),
         ),
-
-        // 2. Overlay Gradasi untuk transisi ke putih di bagian bawah
-        Positioned(
-          bottom: 0,
-          left: 0,
-          right: 0,
+        Positioned.fill(
           child: Container(
-            height: headerHeight * 0.5, // Tinggi gradasi (misal, 50% dari tinggi header)
             decoration: BoxDecoration(
               borderRadius: const BorderRadius.vertical(
-                  bottom: Radius.circular(borderRadiusValue)), // Cocokkan radius
-              // gradient: LinearGradient(
-              //   begin: Alignment.topCenter,
-              //   end: Alignment.bottomCenter,
-              //   colors: [
-              //     Colors.transparent, // Mulai transparan dari atas gradasi
-              //     Theme.of(context).scaffoldBackgroundColor.withOpacity(0.8),
-              //     Theme.of(context).scaffoldBackgroundColor, // Berakhir dengan warna scaffold
-              //   ],
-              //   stops: const [0.0, 0.6, 1.0], // Kontrol penyebaran gradasi
-              // ),
+                  bottom: Radius.circular(borderRadiusValue)),
+              
             ),
           ),
         ),
-
-        // 3. Konten yang di-overlay (Search bar dan Profile Icon)
         Positioned(
           top: MediaQuery.of(context).padding.top + 10,
           left: 16,
@@ -158,7 +183,7 @@ class HomePage extends StatelessWidget {
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                     decoration: BoxDecoration(
-                      color: Theme.of(context).cardColor.withOpacity(0.95), // Lebih baik menggunakan warna tema
+                      color: Theme.of(context).cardColor.withOpacity(0.95),
                       borderRadius: BorderRadius.circular(25),
                       boxShadow: [
                         BoxShadow(
@@ -173,7 +198,8 @@ class HomePage extends StatelessWidget {
                         Icon(Icons.search, color: Theme.of(context).hintColor, size: 20),
                         const SizedBox(width: 8),
                         Text('Cari barang...',
-                            style: TextStyle(color: Theme.of(context).hintColor, fontSize: 16)),
+                            style: TextStyle(
+                                color: Theme.of(context).hintColor, fontSize: 16)),
                       ],
                     ),
                   ),
@@ -193,7 +219,7 @@ class HomePage extends StatelessWidget {
                     padding: const EdgeInsets.all(10.0),
                     child: Icon(
                       Icons.person_outline,
-                      color: Theme.of(context).primaryColor, // Menggunakan warna primer tema
+                      color: Theme.of(context).primaryColor,
                       size: 24,
                     ),
                   ),

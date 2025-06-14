@@ -11,16 +11,14 @@ class SearchItems implements UseCase<List<ItemEntity>, SearchItemsParams> {
   SearchItems(this.repository);
 
   @override
-  Future<Either<Failure, List<ItemEntity>>> call(
-    SearchItemsParams params,
-  ) async {
-    // Validasi bisa ditambahkan di sini jika perlu
+  Future<Either<Failure, List<ItemEntity>>> call(SearchItemsParams params) async {
     return await repository.searchItems(
       query: params.query,
       categoryId: params.categoryId,
       locationId: params.locationId,
       reportType: params.reportType,
       status: params.status,
+      reporterId: params.reporterId, // Meneruskan reporterId ke repository
       limit: params.limit,
       offset: params.offset,
     );
@@ -31,8 +29,10 @@ class SearchItemsParams extends Equatable {
   final String? query;
   final String? categoryId;
   final String? locationId;
-  final String? reportType; // 'kehilangan', 'penemuan'
-  final String? status; // 'hilang', 'ditemukan_tersedia'
+  final String? reportType;
+  final String? status;
+  // PERBAIKAN: Tambahkan parameter reporterId
+  final String? reporterId;
   final int? limit;
   final int? offset;
 
@@ -42,18 +42,20 @@ class SearchItemsParams extends Equatable {
     this.locationId,
     this.reportType,
     this.status,
+    this.reporterId, // Tambahkan di konstruktor
     this.limit,
     this.offset,
   });
 
   @override
   List<Object?> get props => [
-    query,
-    categoryId,
-    locationId,
-    reportType,
-    status,
-    limit,
-    offset,
-  ];
+        query,
+        categoryId,
+        locationId,
+        reportType,
+        status,
+        reporterId, // Tambahkan di props
+        limit,
+        offset,
+      ];
 }

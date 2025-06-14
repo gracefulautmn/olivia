@@ -89,7 +89,7 @@ class ItemListCard extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          DateFormat('dd MMM yyyy').format(item.reportedAt),
+                          DateFormat('dd MMM yyyy').format(item.reportedAt!),
                           style: TextStyle(
                             fontSize: 12,
                             color: Colors.grey[600],
