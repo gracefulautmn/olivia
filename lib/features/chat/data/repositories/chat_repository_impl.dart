@@ -5,42 +5,57 @@ import 'package:olivia/features/chat/data/datasources/chat_remote_data_source.da
 import 'package:olivia/features/chat/domain/entities/chat_room.dart';
 import 'package:olivia/features/chat/domain/entities/message.dart';
 import 'package:olivia/features/chat/domain/repositories/chat_repository.dart';
-// import 'package:olivia/core/network/network_info.dart';
+// Impor params dari use case
+import 'package:olivia/features/chat/domain/usecases/create_or_get_chat_room.dart';
 
 class ChatRepositoryImpl implements ChatRepository {
   final ChatRemoteDataSource remoteDataSource;
-  // final NetworkInfo networkInfo;
 
   ChatRepositoryImpl({
     required this.remoteDataSource,
-    // required this.networkInfo,
   });
 
+  // PERBAIKAN: Implementasi metode baru
+  @override
+  Future<Either<Failure, ChatRoomEntity>> createOrGetChatRoom(CreateOrGetChatRoomParams params) async {
+    try {
+      // Logika dipindahkan ke sini
+      // Datasource akan dipanggil dengan parameter yang sesuai
+      final chatRoomModel = await remoteDataSource.createOrGetChatRoom(
+        chatRoomId: params.chatRoomId,
+        currentUserId: params.currentUserId,
+        otherUserId: params.otherUserId,
+        itemId: params.itemId,
+      );
+      return Right(chatRoomModel);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(e.message));
+    } catch (e) {
+      return Left(UnknownFailure("An unexpected error occurred: ${e.toString()}"));
+    }
+  }
+
+  // ... (implementasi metode lain seperti getChatRooms, sendMessage, dll. tetap sama)
+  
   @override
   Stream<Either<Failure, List<ChatRoomEntity>>> getChatRooms(String userId) {
-    // if (await networkInfo.isConnected) { // Cek koneksi tidak bisa async di return stream
     try {
       return remoteDataSource.getChatRooms(userId).map((chatRoomModels) {
         return Right<Failure, List<ChatRoomEntity>>(chatRoomModels);
       }).handleError((error) {
-        // Tangani error dari stream
         if (error is ServerException) {
           return Left<Failure, List<ChatRoomEntity>>(ServerFailure(error.message));
         }
         return Left<Failure, List<ChatRoomEntity>>(UnknownFailure("Stream error: ${error.toString()}"));
       });
     } catch (e) {
-      // Error saat inisialisasi stream
       return Stream.value(Left(ServerFailure("Failed to initialize chat rooms stream: ${e.toString()}")));
     }
-    // } else {
-    //   return Stream.value(Left(NetworkFailure("No internet connection")));
-    // }
   }
 
   @override
   Stream<Either<Failure, List<MessageEntity>>> getMessages(String chatRoomId, {DateTime? olderThan}) {
-    try {
+     try {
       return remoteDataSource.getMessages(chatRoomId, olderThan: olderThan).map((messageModels) {
         return Right<Failure, List<MessageEntity>>(messageModels);
       }).handleError((error) {
@@ -55,14 +70,8 @@ class ChatRepositoryImpl implements ChatRepository {
   }
 
   @override
-  Future<Either<Failure, MessageEntity>> sendMessage({
-    required String chatRoomId,
-    required String senderId,
-    required String content,
-    String? itemId,
-  }) async {
-    // if (await networkInfo.isConnected) {
-      try {
+  Future<Either<Failure, MessageEntity>> sendMessage({required String chatRoomId, required String senderId, required String content, String? itemId}) async {
+    try {
         final messageModel = await remoteDataSource.sendMessage(
           chatRoomId: chatRoomId,
           senderId: senderId,
@@ -75,39 +84,11 @@ class ChatRepositoryImpl implements ChatRepository {
       } catch (e) {
         return Left(UnknownFailure("An unexpected error occurred: ${e.toString()}"));
       }
-    // } else {
-    //   return Left(NetworkFailure("No internet connection"));
-    // }
-  }
-
-  @override
-  Future<Either<Failure, ChatRoomEntity>> createOrGetChatRoom({
-    required String currentUserId,
-    required String otherUserId,
-    String? itemId,
-  }) async {
-    // if (await networkInfo.isConnected) {
-      try {
-        final chatRoomModel = await remoteDataSource.createOrGetChatRoom(
-          currentUserId: currentUserId,
-          otherUserId: otherUserId,
-          itemId: itemId,
-        );
-        return Right(chatRoomModel);
-      } on ServerException catch (e) {
-        return Left(ServerFailure(e.message));
-      } catch (e) {
-        return Left(UnknownFailure("An unexpected error occurred: ${e.toString()}"));
-      }
-    // } else {
-    //   return Left(NetworkFailure("No internet connection"));
-    // }
   }
 
   @override
   Future<Either<Failure, void>> markMessagesAsRead(String chatRoomId, String userId) async {
-    // if (await networkInfo.isConnected) {
-      try {
+     try {
         await remoteDataSource.markMessagesAsRead(chatRoomId, userId);
         return const Right(null);
       } on ServerException catch (e) {
@@ -115,8 +96,5 @@ class ChatRepositoryImpl implements ChatRepository {
       } catch (e) {
         return Left(UnknownFailure("An unexpected error occurred: ${e.toString()}"));
       }
-    // } else {
-    //   return Left(NetworkFailure("No internet connection"));
-    // }
   }
 }

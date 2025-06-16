@@ -17,10 +17,12 @@ abstract class ChatRemoteDataSource {
     String? itemId,
   });
   Future<ChatRoomModel> createOrGetChatRoom({
+    String? chatRoomId,
     required String currentUserId,
-    required String otherUserId,
+    String? otherUserId,
     String? itemId,
   });
+  
   Future<void> markMessagesAsRead(String chatRoomId, String userId);
   Future<List<MessageModel>> getInitialMessages(String chatRoomId, int limit);
 }
@@ -241,32 +243,45 @@ class ChatRemoteDataSourceImpl implements ChatRemoteDataSource {
 
   @override
   Future<ChatRoomModel> createOrGetChatRoom({
+    String? chatRoomId,
     required String currentUserId,
-    required String otherUserId,
+    String? otherUserId,
     String? itemId,
   }) async {
-    try {
-      final String chatRoomId = await _executeCreateOrGetChatRoomRpc(
-        currentUserId: currentUserId,
-        otherUserId: otherUserId,
-        itemId: itemId,
-      );
-
-      final ChatRoomModel chatRoom = await _fetchChatRoomDetailsById(chatRoomId, currentUserId);
-      
-      return chatRoom;
-
-    } catch (e) {
-      print("Error in createOrGetChatRoom (public method): $e");
-      // Cek jika e adalah salah satu dari exception yang sudah Anda definisikan
-      // Karena NotFoundException tidak ada, kita hanya cek ServerException
-      if (e is ServerException) {
-        rethrow;
+    // Skenario 1: Membuka chat yang sudah ada (dari notifikasi)
+    if (chatRoomId != null) {
+      try {
+        final response = await supabaseClient
+            .from('chat_rooms')
+            .select('*, chat_participants!inner(profiles!inner(*)), chat_messages(*)')
+            .eq('id', chatRoomId)
+            .single();
+        return ChatRoomModel.fromJson(response, currentUserId);
+      } on PostgrestException catch (e) {
+        throw ServerException(message: "Gagal memuat chat room: ${e.message}");
       }
-      // Jika error lain, bungkus sebagai ServerException
-      throw ServerException(
-        message: "Failed to create or get chat room (overall): ${e.toString()}",
-      );
+    } 
+    // Skenario 2: Membuat chat baru
+    else if (otherUserId != null) {
+      try {
+        final response = await supabaseClient.rpc(
+          'create_or_get_chat_room',
+          params: {
+            'p_user1_id': currentUserId,
+            'p_user2_id': otherUserId,
+            'p_item_id': itemId,
+          },
+        );
+        // RPC akan mengembalikan UUID room, kita perlu fetch detailnya
+        final newChatRoomId = response as String;
+        return await createOrGetChatRoom(chatRoomId: newChatRoomId, currentUserId: currentUserId);
+      } on PostgrestException catch (e) {
+        throw ServerException(message: "Gagal membuat chat room: ${e.message}");
+      }
+    } 
+    // Skenario tidak valid
+    else {
+      throw ArgumentError("Parameter tidak lengkap untuk membuat atau membuka chat.");
     }
   }
   

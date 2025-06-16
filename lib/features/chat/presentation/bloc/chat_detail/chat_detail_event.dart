@@ -11,7 +11,7 @@ abstract class ChatDetailEvent extends Equatable {
 class InitializeChatRoom extends ChatDetailEvent {
   final String? chatRoomId; // Bisa null jika ini chat baru
   final String currentUserId;
-  final String otherUserId;
+  final String? otherUserId;
   final String? itemId; // Opsional, jika chat dari item
   final String recipientName; // Untuk UI
 

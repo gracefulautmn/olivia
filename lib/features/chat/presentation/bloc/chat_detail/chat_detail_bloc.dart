@@ -20,7 +20,7 @@ class ChatDetailBloc extends Bloc<ChatDetailEvent, ChatDetailState> {
   final MarkMessagesAsRead _markMessagesAsReadUseCase;
 
   StreamSubscription<Either<Failure, List<MessageEntity>>>? _messagesSubscription;
-  String? _currentUserId; // Untuk mengirim pesan
+  String? _currentUserId;
 
   ChatDetailBloc({
     required CreateOrGetChatRoom createOrGetChatRoomUseCase,
@@ -33,7 +33,7 @@ class ChatDetailBloc extends Bloc<ChatDetailEvent, ChatDetailState> {
         _markMessagesAsReadUseCase = markMessagesAsReadUseCase,
         super(const ChatDetailState()) {
     on<InitializeChatRoom>(_onInitializeChatRoom);
-    on<LoadMessages>(_onLoadMessages); // Dipanggil setelah room berhasil di-init
+    on<LoadMessages>(_onLoadMessages);
     on<_MessagesUpdated>(_onMessagesUpdated);
     on<SendNewMessage>(_onSendNewMessage);
     on<MarkAsRead>(_onMarkAsRead);
@@ -41,14 +41,18 @@ class ChatDetailBloc extends Bloc<ChatDetailEvent, ChatDetailState> {
 
   Future<void> _onInitializeChatRoom(InitializeChatRoom event, Emitter<ChatDetailState> emit) async {
     print('🟡 [ChatDetailBloc] InitializeChatRoom started');
-    print('🟡 [ChatDetailBloc] Parameters: currentUserId=${event.currentUserId}, otherUserId=${event.otherUserId}');
+    print('🟡 [ChatDetailBloc] Parameters: chatRoomId=${event.chatRoomId}, currentUserId=${event.currentUserId}, otherUserId=${event.otherUserId}');
     
     emit(state.copyWith(status: ChatDetailStatus.loadingRoom, recipientName: event.recipientName, clearFailure: true));
-    _currentUserId = event.currentUserId; // Simpan currentUserId
+    _currentUserId = event.currentUserId;
 
+    // Logika disederhanakan: Cukup panggil use case.
+    // Repository yang sekarang bertanggung jawab menangani logika
+    // apakah akan membuat room baru atau mengambil yang sudah ada.
     final result = await _createOrGetChatRoomUseCase(CreateOrGetChatRoomParams(
+      chatRoomId: event.chatRoomId, // Bisa null jika membuat baru
       currentUserId: event.currentUserId,
-      otherUserId: event.otherUserId,
+      otherUserId: event.otherUserId, // Bisa null jika membuka dari notifikasi
       itemId: event.itemId,
     ));
 
@@ -56,14 +60,14 @@ class ChatDetailBloc extends Bloc<ChatDetailEvent, ChatDetailState> {
       (failure) => emit(state.copyWith(status: ChatDetailStatus.failure, failure: failure)),
       (chatRoom) {
         emit(state.copyWith(status: ChatDetailStatus.roomLoaded, chatRoom: chatRoom));
-        add(LoadMessages(chatRoom.id)); // Langsung load messages setelah room didapat/dibuat
-        add(const MarkAsRead()); // Tandai pesan sebagai sudah dibaca saat masuk room
+        add(LoadMessages(chatRoom.id)); // Langsung muat pesan setelah room didapat
+        add(const MarkAsRead()); // Tandai pesan sebagai sudah dibaca
       },
     );
   }
 
   void _onLoadMessages(LoadMessages event, Emitter<ChatDetailState> emit) {
-    if (state.chatRoom == null || state.chatRoom!.id != event.chatRoomId) return; // Pastikan room sudah ada
+    if (state.chatRoom == null || state.chatRoom!.id != event.chatRoomId) return;
 
     emit(state.copyWith(status: ChatDetailStatus.loadingMessages, clearFailure: true));
     _messagesSubscription?.cancel();
@@ -80,7 +84,7 @@ class ChatDetailBloc extends Bloc<ChatDetailEvent, ChatDetailState> {
         emit(state.copyWith(status: ChatDetailStatus.messagesLoaded, messages: messages, clearFailure: true));
         // Setelah pesan baru diterima, tandai lagi sebagai sudah dibaca
         if (messages.isNotEmpty && messages.any((m) => m.senderId != _currentUserId && !m.isRead)) {
-            add(const MarkAsRead());
+           add(const MarkAsRead());
         }
       }
     );
@@ -88,7 +92,7 @@ class ChatDetailBloc extends Bloc<ChatDetailEvent, ChatDetailState> {
 
   Future<void> _onSendNewMessage(SendNewMessage event, Emitter<ChatDetailState> emit) async {
     if (state.chatRoom == null || _currentUserId == null) {
-      emit(state.copyWith(status: ChatDetailStatus.sendMessageFailure, failure: InputValidationFailure("Chat room atau user tidak valid.")));
+      emit(state.copyWith(status: ChatDetailStatus.sendMessageFailure, failure: const InputValidationFailure("Chat room atau user tidak valid.")));
       return;
     }
 
@@ -115,8 +119,6 @@ class ChatDetailBloc extends Bloc<ChatDetailEvent, ChatDetailState> {
         chatRoomId: state.chatRoom!.id,
         userId: _currentUserId!,
       ));
-      // Tidak perlu emit state khusus, karena list chat room (unread count)
-      // dan tampilan pesan (jika ada indikator read) akan diupdate oleh stream masing-masing.
     }
   }
 

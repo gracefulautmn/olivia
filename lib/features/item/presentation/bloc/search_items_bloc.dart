@@ -90,14 +90,26 @@ class SearchItemsBloc extends Bloc<SearchItemsEvent, SearchItemsState> {
       clearFailure: true,
     ));
 
-    // PENTING: Pastikan SearchItemsParams Anda juga memiliki parameter `reporterId`
+    // ===>>> PERBAIKAN UTAMA DI SINI <<<===
+    // Tentukan status filter secara dinamis.
+    // Hanya filter status jika kita secara spesifik mencari barang 'penemuan'.
+    // Jika tidak (misalnya saat melihat 'Laporan Saya'), jangan filter statusnya.
+    final String? statusToUse;
+    if (reportTypeToUse == 'penemuan') {
+      statusToUse = 'ditemukan_tersedia';
+    } else {
+      // Untuk 'kehilangan' atau jika tidak ada filter reportType, jangan filter status.
+      // Ini memungkinkan kita melihat semua status laporan kita di halaman riwayat.
+      statusToUse = null;
+    }
+
     final result = await _searchItemsUseCase(SearchItemsParams(
       query: queryToUse,
       categoryId: categoryToUse?.id,
       locationId: locationToUse?.id,
       reportType: reportTypeToUse,
       reporterId: reporterIdToUse,
-      status: reportTypeToUse == 'penemuan' ? 'ditemukan_tersedia' : null,
+      status: statusToUse, // Menggunakan status filter yang dinamis
     ));
 
     result.fold(
@@ -115,14 +127,14 @@ class SearchItemsBloc extends Bloc<SearchItemsEvent, SearchItemsState> {
         ? state.availableLocations.firstWhereOrNull((l) => l.id == event.locationIdToSet)
         : null;
     
-    final newReportType = event.reportTypeToSet;
-
+    final reportTypeToKeep = event.reportTypeToSet ?? state.selectedReportType;
+    
     add(PerformSearchQuery(
       query: state.currentQuery,
       selectedCategory: newSelectedCategory,
       selectedLocation: newSelectedLocation,
-      selectedReportType: newReportType,
-      reporterId: state.reporterId, // Tetap gunakan reporterId dari state jika ada
+      selectedReportType: reportTypeToKeep,
+      reporterId: state.reporterId,
       availableCategories: state.availableCategories,
       availableLocations: state.availableLocations,
     ));
@@ -135,9 +147,8 @@ class SearchItemsBloc extends Bloc<SearchItemsEvent, SearchItemsState> {
       currentQuery: '',
       selectedCategory: null,
       selectedLocation: null,
-      selectedReportType: null,
-      reporterId: null, // Hapus juga filter reporterId
-      clearFailure: true,
+      selectedReportType: null, // Reset juga ini
+      reporterId: null,
     ));
   }
 }

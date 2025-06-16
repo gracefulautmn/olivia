@@ -230,7 +230,9 @@ class ProfilePage extends StatelessWidget {
         Center(
           child: Chip(
             label: Text(
-              user.role == UserRole.mahasiswa ? 'Mahasiswa' : 'Dosen/Staff',
+              user.role == UserRole.mahasiswa
+                  ? 'Mahasiswa'
+                  : (user.role == UserRole.keamanan ? 'Keamanan' : 'Dosen/Staff'),
               style: const TextStyle(color: Colors.white),
             ),
             backgroundColor:

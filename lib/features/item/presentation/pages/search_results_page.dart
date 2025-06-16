@@ -207,7 +207,7 @@ class _SearchResultsPageState extends State<SearchResultsPage> {
                           onDeleted: () => _searchBloc.add(const ApplySearchFilters(locationIdToSet: null)),
                           deleteIconColor: AppColors.primaryColor.withOpacity(0.7),
                         ),
-                      // PERBAIKAN: Chip untuk reportType dihapus
+                      
                     ],
                   ),
                 );

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:olivia/core/di/service_locator.dart';
-import 'package:olivia/core/utils/app_colors.dart';
 import 'package:olivia/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:olivia/features/chat/presentation/pages/chat_detail_page.dart';
 import 'package:olivia/features/item/presentation/pages/item_detail_page.dart';
@@ -42,7 +41,6 @@ class _NotificationPageState extends State<NotificationPage> {
   void dispose() {
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
-    // _notificationBloc.close(); // Tidak perlu jika dari sl factory
     super.dispose();
   }
 
@@ -59,7 +57,7 @@ class _NotificationPageState extends State<NotificationPage> {
     if (!_scrollController.hasClients) return false;
     final maxScroll = _scrollController.position.maxScrollExtent;
     final currentScroll = _scrollController.offset;
-    return currentScroll >= (maxScroll * 0.9); // Load saat 90% tercapai
+    return currentScroll >= (maxScroll * 0.9);
   }
 
   @override
@@ -129,31 +127,36 @@ class _NotificationPageState extends State<NotificationPage> {
                   if (index >= state.notifications.length) {
                     return state.status == NotificationStatus.loadingMore
                         ? const Center(child: Padding(padding: EdgeInsets.all(8.0), child: LoadingIndicator()))
-                        : const SizedBox.shrink(); // Jika sudah allLoaded atau tidak loading more
+                        : const SizedBox.shrink();
                   }
                   final notification = state.notifications[index];
                   return NotificationListItemWidget(
                     notification: notification,
                     onTap: () {
-                      // Tandai dibaca
+                      // Tandai dibaca saat notifikasi diklik
                       if (!notification.isRead) {
                         context.read<NotificationBloc>().add(MarkSingleNotificationRead(notification.id));
                       }
+                      
+                      // === PERBAIKAN UTAMA DI SINI ===
                       // Navigasi berdasarkan tipe notifikasi
-                      if (notification.relatedItemId != null) {
-                        context.pushNamed(ItemDetailPage.routeName, pathParameters: {'itemId': notification.relatedItemId!});
-                      } else if (notification.relatedChatId != null) {
-                        // Untuk navigasi ke chat, kita perlu info recipientId dan recipientName
-                        // Ini seharusnya disimpan di notifikasi atau diambil dari chat room
-                        // Untuk sekarang, kita asumsikan relatedChatId adalah ID chat room
-                        // Anda mungkin perlu logic tambahan untuk mendapatkan detail partisipan lain
-                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Navigasi ke chat belum diimplementasikan sepenuhnya dari notifikasi.')));
-                        // context.pushNamed(ChatDetailPage.routeName, pathParameters: {'chatRoomId': notification.relatedChatId!});
+                      if (notification.type == 'item_match' && notification.relatedItemId != null) {
+                        context.pushNamed(
+                          ItemDetailPage.routeName, 
+                          pathParameters: {'itemId': notification.relatedItemId!}
+                        );
+                      } else if (notification.type == 'new_message' && notification.relatedChatId != null) {
+                        // Navigasi langsung ke chat room yang sudah ada menggunakan ID-nya.
+                        // ChatDetailPage akan memuat detail room berdasarkan ID ini.
+                        context.pushNamed(
+                          ChatDetailPage.routeName, 
+                          pathParameters: {'chatRoomId': notification.relatedChatId!}
+                        );
                       }
                     },
                   );
                 },
-                 separatorBuilder: (context, index) => Divider(height: 1, color: Colors.grey.shade300),
+                separatorBuilder: (context, index) => Divider(height: 1, color: Colors.grey.shade300),
               ),
             );
           },

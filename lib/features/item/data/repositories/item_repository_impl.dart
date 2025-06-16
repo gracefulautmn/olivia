@@ -91,6 +91,7 @@ class ItemRepositoryImpl implements ItemRepository {
         categoryId: categoryId,
         locationId: locationId,
         reportType: reportType,
+        reporterId: reporterId,
         status: status,
         limit: limit,
         offset: offset,
