@@ -5,11 +5,11 @@ import 'package:go_router/go_router.dart';
 import 'package:olivia/core/di/service_locator.dart';
 import 'package:olivia/core/utils/app_colors.dart';
 import 'package:olivia/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:olivia/features/history/presentation/pages/history_page.dart'; // Impor halaman riwayat
 import 'package:olivia/features/item/domain/entities/item.dart';
 import 'package:olivia/features/item/domain/usecases/claim_item_via_qr.dart';
 import 'package:olivia/common_widgets/loading_indicator.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
-import 'package:olivia/features/item/presentation/pages/item_detail_page.dart';
 
 // BLoC untuk Scan & Claim
 class ScanClaimCubit extends Cubit<ScanClaimState> {
@@ -39,16 +39,13 @@ abstract class ScanClaimState extends Equatable {
 }
 
 class ScanClaimInitial extends ScanClaimState {}
-
 class ScanClaimLoading extends ScanClaimState {}
-
 class ScanClaimSuccess extends ScanClaimState {
   final ItemEntity claimedItem;
   const ScanClaimSuccess(this.claimedItem);
   @override
   List<Object> get props => [claimedItem];
 }
-
 class ScanClaimFailure extends ScanClaimState {
   final String message;
   const ScanClaimFailure(this.message);
@@ -70,7 +67,7 @@ class _ScanQrPageState extends State<ScanQrPage> {
     detectionSpeed: DetectionSpeed.normal,
   );
   bool _isProcessing = false;
-  bool _isTorchOn = false; // Track torch state manually
+  bool _isTorchOn = false;
 
   @override
   void dispose() {
@@ -79,7 +76,7 @@ class _ScanQrPageState extends State<ScanQrPage> {
   }
 
   void _handleBarcode(BuildContext blocContext, BarcodeCapture capture) {
-    if (_isProcessing) return; // Mencegah multiple processing
+    if (_isProcessing) return;
 
     final List<Barcode> barcodes = capture.barcodes;
     if (barcodes.isNotEmpty && barcodes.first.rawValue != null) {
@@ -135,20 +132,16 @@ class _ScanQrPageState extends State<ScanQrPage> {
         body: BlocConsumer<ScanClaimCubit, ScanClaimState>(
           listener: (context, state) {
             if (state is ScanClaimSuccess) {
+              // Tampilkan notifikasi sukses
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text(
-                    'Barang "${state.claimedItem.itemName}" berhasil diklaim!',
-                  ),
+                      'Barang "${state.claimedItem.itemName}" berhasil diklaim!'),
                   backgroundColor: Colors.green,
                 ),
               );
-              // Navigasi ke detail barang yang diklaim atau ke halaman riwayat
-              context.pop(); // Kembali dulu
-              context.pushNamed(
-                ItemDetailPage.routeName,
-                pathParameters: {'itemId': state.claimedItem.id},
-              );
+              // PERBAIKAN UTAMA: Arahkan ke halaman riwayat
+              context.go(HistoryPage.routeName);
             }
             if (state is ScanClaimFailure) {
               ScaffoldMessenger.of(context).showSnackBar(
@@ -157,31 +150,25 @@ class _ScanQrPageState extends State<ScanQrPage> {
                   backgroundColor: Colors.red,
                 ),
               );
-              BlocProvider.of<ScanClaimCubit>(
-                context,
-                listen: false,
-              ).reset(); // Reset state agar bisa scan lagi
-              setState(() {
-                _isProcessing = false;
-              });
-            }
-            if (state is ScanClaimLoading) {
-              // Tidak perlu setState isProcessing karena sudah dihandle di _handleBarcode
+              // Reset state agar bisa scan lagi
+              BlocProvider.of<ScanClaimCubit>(context, listen: false).reset();
             }
             if (state is ScanClaimInitial) {
-              // Saat direset
+              // Saat direset, pastikan _isProcessing juga false
               setState(() {
                 _isProcessing = false;
               });
             }
           },
           builder: (context, state) {
+            // Tampilkan loading jika sedang memproses
             if (state is ScanClaimLoading || _isProcessing) {
               return const Center(
                 child: LoadingIndicator(message: 'Memproses klaim...'),
               );
             }
 
+            // Tampilkan UI scanner
             return Stack(
               children: [
                 MobileScanner(
@@ -190,7 +177,6 @@ class _ScanQrPageState extends State<ScanQrPage> {
                     _handleBarcode(context, capture);
                   },
                 ),
-                // Tambahkan UI overlay di sini jika perlu (misal kotak penanda area scan)
                 Center(
                   child: Container(
                     width: 250,
@@ -209,13 +195,14 @@ class _ScanQrPageState extends State<ScanQrPage> {
                   left: 0,
                   right: 0,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    child: Text(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    color: Colors.black.withOpacity(0.5),
+                    child: const Text(
                       'Arahkan kamera ke QR Code pada barang temuan.',
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        color: Colors.white.withOpacity(0.9),
-                        backgroundColor: Colors.black.withOpacity(0.5),
+                        color: Colors.white,
                         fontSize: 16,
                       ),
                     ),
