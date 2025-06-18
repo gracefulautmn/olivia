@@ -32,110 +32,148 @@ class _FeedbackPageState extends State<FeedbackPage> {
     return BlocProvider(
       create: (context) => sl<FeedbackBloc>(),
       child: Scaffold(
-        appBar: AppBar(title: const Text('Beri Masukan')),
-        body: BlocConsumer<FeedbackBloc, FeedbackState>(
-          listener: (context, state) {
-            if (state is FeedbackSuccess) {
-              ScaffoldMessenger.of(context)
-                ..hideCurrentSnackBar()
-                ..showSnackBar(const SnackBar(
-                  content: Text('Terima kasih! Masukan Anda telah terkirim.'),
-                  backgroundColor: Colors.green,
-                ));
-              Navigator.of(context).pop();
-            }
-            if (state is FeedbackFailure) {
-              ScaffoldMessenger.of(context)
-                ..hideCurrentSnackBar()
-                ..showSnackBar(SnackBar(
-                  content: Text('Gagal mengirim: ${state.message}'),
-                  backgroundColor: Colors.red,
-                ));
-            }
-          },
-          builder: (context, state) {
-            if (state is FeedbackSubmitting) {
-              return const Center(child: LoadingIndicator(message: 'Mengirim...'));
-            }
+        appBar: AppBar(
+  backgroundColor: Colors.white, // Background putih
+  elevation: 0,
+  iconTheme: const IconThemeData(color: Colors.black), // Icon back hitam
+  title: const Text(
+    'Beri Masukan',
+    style: TextStyle(
+      color: Colors.black, // Teks hitam
+      fontWeight: FontWeight.bold,
+    ),
+  ),
+),
 
-            return SingleChildScrollView(
-              padding: const EdgeInsets.all(16.0),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text(
-                      'Kami menghargai masukan Anda untuk membuat aplikasi ini lebih baik.',
-                      style: Theme.of(context).textTheme.titleMedium,
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 24),
-                    DropdownButtonFormField<String>(
-                      value: _selectedFeedbackType,
-                      decoration: const InputDecoration(
-                        labelText: 'Jenis Masukan',
-                        border: OutlineInputBorder(),
-                      ),
-                      items: const [
-                        DropdownMenuItem(value: 'saran', child: Text('Saran & Ide')),
-                        DropdownMenuItem(value: 'bug', child: Text('Laporan Bug')),
-                        DropdownMenuItem(value: 'review', child: Text('Review Aplikasi')),
-                      ],
-                      onChanged: (value) {
-                        if (value != null) {
-                          setState(() {
-                            _selectedFeedbackType = value;
-                          });
-                        }
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _contentController,
-                      decoration: const InputDecoration(
-                        labelText: 'Detail Masukan Anda*',
-                        hintText: 'Jelaskan sedetail mungkin...',
-                        border: OutlineInputBorder(),
-                        alignLabelWithHint: true,
-                      ),
-                      maxLines: 8,
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'Mohon isi detail masukan Anda.';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 24),
-                    CustomButton(
-                      text: 'Kirim Masukan',
-                      onPressed: () {
-                        final currentUser = context.read<AuthBloc>().state.user;
-                        if (currentUser == null) {
-                           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                            content: Text('Anda harus login untuk mengirim masukan.'),
-                            backgroundColor: Colors.red,
-                          ));
-                          return;
-                        }
-
-                        if (_formKey.currentState!.validate()) {
-                          final feedback = FeedbackEntity(
-                            userId: currentUser.id,
-                            feedbackType: _selectedFeedbackType,
-                            content: _contentController.text,
-                          );
-                          context.read<FeedbackBloc>().add(FeedbackSubmitted(feedback));
-                        }
-                      },
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
+        body: Stack(
+  children: [
+    // Background gradient full screen
+    Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Colors.white,
+            Colors.white,
+            Colors.white,
+            Color(0xFFE3F2FD), // Light blue
+            Color(0xFF81D4FA), // Medium blue
+            Color(0xFF4FC3F7), // Darker blue
+          ],
         ),
+      ),
+    ),
+
+    // Konten scrollable di atasnya
+    BlocConsumer<FeedbackBloc, FeedbackState>(
+      listener: (context, state) {
+        if (state is FeedbackSuccess) {
+          ScaffoldMessenger.of(context)
+            ..hideCurrentSnackBar()
+            ..showSnackBar(const SnackBar(
+              content: Text('Terima kasih! Masukan Anda telah terkirim.'),
+              backgroundColor: Colors.green,
+            ));
+          Navigator.of(context).pop();
+        }
+        if (state is FeedbackFailure) {
+          ScaffoldMessenger.of(context)
+            ..hideCurrentSnackBar()
+            ..showSnackBar(SnackBar(
+              content: Text('Gagal mengirim: ${state.message}'),
+              backgroundColor: Colors.red,
+            ));
+        }
+      },
+      builder: (context, state) {
+        if (state is FeedbackSubmitting) {
+          return const Center(child: LoadingIndicator(message: 'Mengirim...'));
+        }
+
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(16.0),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'Kami menghargai masukan Anda untuk membuat aplikasi ini lebih baik.',
+                  style: Theme.of(context).textTheme.titleMedium,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                DropdownButtonFormField<String>(
+                  value: _selectedFeedbackType,
+                  decoration: const InputDecoration(
+                    labelText: 'Jenis Masukan',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: const [
+                    DropdownMenuItem(value: 'saran', child: Text('Saran & Ide')),
+                    DropdownMenuItem(value: 'bug', child: Text('Laporan Bug')),
+                    DropdownMenuItem(value: 'review', child: Text('Review Aplikasi')),
+                  ],
+                  onChanged: (value) {
+                    if (value != null) {
+                      setState(() {
+                        _selectedFeedbackType = value;
+                      });
+                    }
+                  },
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _contentController,
+                  decoration: const InputDecoration(
+                    labelText: 'Detail Masukan Anda*',
+                    hintText: 'Jelaskan sedetail mungkin...',
+                    border: OutlineInputBorder(),
+                    alignLabelWithHint: true,
+                    filled: true,
+                    fillColor: Colors.white,
+                  ),
+                  maxLines: 8,
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Mohon isi detail masukan Anda.';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 24),
+                CustomButton(
+                  text: 'Kirim Masukan',
+                  onPressed: () {
+                    final currentUser = context.read<AuthBloc>().state.user;
+                    if (currentUser == null) {
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                        content: Text('Anda harus login untuk mengirim masukan.'),
+                        backgroundColor: Colors.red,
+                      ));
+                      return;
+                    }
+
+                    if (_formKey.currentState!.validate()) {
+                      final feedback = FeedbackEntity(
+                        userId: currentUser.id,
+                        feedbackType: _selectedFeedbackType,
+                        content: _contentController.text,
+                      );
+                      context.read<FeedbackBloc>().add(FeedbackSubmitted(feedback));
+                    }
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    ),
+  ],
+),
+
       ),
     );
   }

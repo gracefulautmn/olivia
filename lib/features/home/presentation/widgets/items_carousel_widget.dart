@@ -160,7 +160,7 @@ class ItemsCarouselWidget extends StatelessWidget {
                       Chip(
                         label: Text(
                           item.reportType == ReportType.penemuan
-                              ? 'Ditemukan'
+                              ? 'PENEMUAN'
                               : 'Hilang',
                           style: const TextStyle(
                             fontSize: 10,

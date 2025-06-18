@@ -261,22 +261,22 @@ class ProfilePage extends StatelessWidget {
           _buildInfoRow(Icons.badge_outlined, 'NIM/NIDN', user.nim!),
 
         const SizedBox(height: 30),
-        CustomButton(
-          text: 'Simpan Perubahan',
-          isLoading: profileState.status == ProfileStatus.updating,
-          onPressed: () {
-            // Validasi form sebelum submit (jika ada GlobalKey<FormState>)
-            // Untuk sekarang, langsung panggil event
-            context.read<ProfileBloc>().add(
-              UpdateProfileRequested(
-                userId: user.id,
-                fullName: profileState.currentFullName,
-                major: isStudent ? profileState.currentMajor : null,
-                // avatarFile sudah di state via ProfileAvatarChanged
-              ),
-            );
-          },
-        ),
+        // CustomButton(
+        //   text: 'Simpan Perubahan',
+        //   isLoading: profileState.status == ProfileStatus.updating,
+        //   onPressed: () {
+        //     // Validasi form sebelum submit (jika ada GlobalKey<FormState>)
+        //     // Untuk sekarang, langsung panggil event
+        //     context.read<ProfileBloc>().add(
+        //       UpdateProfileRequested(
+        //         userId: user.id,
+        //         fullName: profileState.currentFullName,
+        //         major: isStudent ? profileState.currentMajor : null,
+        //         // avatarFile sudah di state via ProfileAvatarChanged
+        //       ),
+        //     );
+        //   },
+        // ),
       ],
     );
   }

@@ -10,6 +10,7 @@ import 'package:olivia/features/chat/presentation/pages/chat_list_page.dart';
 import 'package:olivia/features/history/presentation/pages/history_page.dart';
 import 'package:olivia/features/home/presentation/pages/home_page.dart';
 import 'package:olivia/features/item/presentation/pages/item_detail_page.dart';
+import 'package:olivia/features/feedback/presentation/pages/feedback_page.dart';
 import 'package:olivia/features/item/presentation/pages/report_item_page.dart';
 import 'package:olivia/features/item/presentation/pages/scan_qr_page.dart';
 import 'package:olivia/features/item/presentation/pages/search_results_page.dart';
@@ -85,6 +86,11 @@ class AppRouter {
               builder: (BuildContext context, GoRouterState state) {
                 return const ReportItemPage();
               },
+            ),
+            GoRoute(
+              path: FeedbackPage.routeName, // Contoh: /feedback
+              name: FeedbackPage.routeName,
+              builder: (context, state) => const FeedbackPage(),
             ),
             GoRoute(
               path: ScanQrPage.routeName,

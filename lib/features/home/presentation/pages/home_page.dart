@@ -53,7 +53,7 @@ class HomePage extends StatelessWidget {
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(color: Colors.blue.shade200)),
                             child: const Text(
-                              'Jaga barang bawaan Anda dengan baik !',
+                              'Jaga barang bawaan Anda dengan baik. Kehilangan dapat merepotkan!',
                               textAlign: TextAlign.center,
                               style:
                                   TextStyle(fontSize: 15, color: Colors.blueGrey),
@@ -72,8 +72,8 @@ class HomePage extends StatelessWidget {
                                 );
                               },
                             ),
-                          // Laporan Kehilangan tidak lagi ditampilkan sesuai revisi sebelumnya
-                          // if (state.recentLostItems.isNotEmpty) ...
+                          // Hapus bagian Laporan Kehilangan jika tidak ingin ditampilkan di sini
+                          // if (state.recentLostItems.isNotEmpty)
                           
                           const SizedBox(height: 80), // Space untuk FAB
                         ],
@@ -91,9 +91,10 @@ class HomePage extends StatelessWidget {
         floatingActionButton: FloatingActionButton(
           onPressed: () => _showSupportOptions(context),
           backgroundColor: Theme.of(context).primaryColor,
+          shape: const CircleBorder(),
           child: const Icon(Icons.support_agent_outlined, color: Colors.white),
         ),
-        // PENTING: Gunakan FloatingActionButtonLocation yang sesuai jika tidak ada BottomAppBar
+        // Gunakan lokasi standar jika BottomAppBar tidak ada
         floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       ),
     );
@@ -102,8 +103,8 @@ class HomePage extends StatelessWidget {
   // --- Fungsi helper dipindahkan ke dalam HomePage ---
 
   void _showSupportOptions(BuildContext context) {
-    const String securityUserId = 'af7321dd-7ce2-4112-999e-0b88edad8d0d';
-    const String securityUserName = 'Keamanan';
+    const String securityUserId = 'af7321dd-7ce2-4112-999e-0b88edad8d0d'; // Ganti dengan ID user keamanan
+    const String securityUserName = 'Pihak Keamanan';
 
     showModalBottomSheet(
       context: context,
@@ -164,7 +165,6 @@ class HomePage extends StatelessWidget {
             decoration: BoxDecoration(
               borderRadius: const BorderRadius.vertical(
                   bottom: Radius.circular(borderRadiusValue)),
-              
             ),
           ),
         ),
