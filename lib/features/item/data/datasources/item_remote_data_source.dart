@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:olivia/core/errors/exceptions.dart';
 import 'package:olivia/features/history/data/models/claim_history_entry_model.dart';
 import 'package:olivia/features/item/data/models/item_model.dart';
+import 'package:olivia/features/item/domain/usecases/submit_guest_claim.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 
@@ -35,6 +36,8 @@ abstract class ItemRemoteDataSource {
     required String qrCodeData,
     required String claimerId,
   });
+  
+  Future<void> submitGuestClaim(SubmitGuestClaimParams params);
 
   Future<List<ClaimHistoryEntryModel>> getGlobalClaimHistory();
 
@@ -48,6 +51,40 @@ class ItemRemoteDataSourceImpl implements ItemRemoteDataSource {
 
   ItemRemoteDataSourceImpl({required this.supabaseClient}) : uuid = const Uuid();
 
+  @override
+  Future<ItemModel> getItemDetails(String itemId) async {
+     try {
+       // --- PERBAIKAN DI SINI ---
+       // Query sekarang juga mengambil data dari tabel 'claims' yang berhubungan,
+       // termasuk profil pengklaim (claimerProfile) dan detail tamu.
+       final response = await supabaseClient
+           .from('items')
+           .select('''
+              *,
+              reporterProfile:profiles!items_reporter_id_fkey(*),
+              category:categories(*),
+              location:locations(*),
+              claims (
+                claimed_at,
+                guest_claimer_details,
+                claimerProfile:profiles!claims_claimer_id_fkey(*)
+              )
+           ''')
+           .eq('id', itemId)
+           .single();
+       return ItemModel.fromJson(response);
+     } on PostgrestException catch (e) {
+       if (e.code == 'PGRST116') {
+         throw ServerException(message: "Barang tidak ditemukan.");
+       }
+       throw ServerException(message: "Gagal mengambil detail barang: ${e.message}");
+     } catch (e) {
+       throw ServerException(message: "Terjadi kesalahan: ${e.toString()}");
+     }
+  }
+
+  // Sisa metode lainnya tetap sama...
+  
   Future<String?> _uploadImage(File imageFile, String itemId) async {
     try {
       final fileName = '${itemId}_${DateTime.now().millisecondsSinceEpoch}.${imageFile.path.split('.').last}';
@@ -59,8 +96,45 @@ class ItemRemoteDataSourceImpl implements ItemRemoteDataSource {
       final publicUrl = supabaseClient.storage.from('item-images').getPublicUrl(fileName);
       return publicUrl;
     } catch (e) {
+      // ignore: avoid_print
       print("Error uploading image: $e");
       return null;
+    }
+  }
+
+  @override
+  Future<List<ClaimHistoryEntryModel>> getGlobalClaimHistory() async {
+    try {
+      final response = await supabaseClient.from('claims').select('''
+        claimed_at,
+        guest_claimer_details, 
+        item:items!inner (*, categories(*), locations(*), profiles!inner(*)),
+        claimer:profiles!claims_claimer_id_fkey!left (*), 
+        security_reporter:profiles!claims_reported_by_id_fkey!inner (*)
+      ''').order('claimed_at', ascending: false);
+
+      final List<ClaimHistoryEntryModel> validEntries = [];
+      for (final jsonEntry in (response as List)) {
+        if (jsonEntry != null &&
+            jsonEntry['item'] != null &&
+            jsonEntry['security_reporter'] != null) {
+          try {
+            validEntries.add(ClaimHistoryEntryModel.fromJson(jsonEntry as Map<String, dynamic>));
+          } catch (e) {
+            // ignore: avoid_print
+            print('Gagal mem-parsing satu entri riwayat klaim: $e. Data: $jsonEntry');
+          }
+        } else {
+          // ignore: avoid_print
+          print('Melewatkan entri riwayat klaim yang tidak valid atau tidak lengkap: $jsonEntry');
+        }
+      }
+      return validEntries;
+          
+    } on PostgrestException catch (e) {
+      throw ServerException(message: "Gagal mengambil riwayat: ${e.message}");
+    } catch (e) {
+      throw ServerException(message: "Gagal mengambil riwayat klaim global: ${e.toString()}");
     }
   }
 
@@ -107,7 +181,7 @@ class ItemRemoteDataSourceImpl implements ItemRemoteDataSource {
       final response = await supabaseClient
           .from('items')
           .insert(itemData)
-          .select('*, profiles!inner(*), categories(*), locations(*)')
+          .select('*, reporterProfile:profiles!items_reporter_id_fkey(*), category:categories(*), location:locations(*)')
           .single();
 
       return ItemModel.fromJson(response);
@@ -134,33 +208,27 @@ class ItemRemoteDataSourceImpl implements ItemRemoteDataSource {
     try {
       var queryBuilder = supabaseClient
           .from('items')
-          .select('*, categories(*), locations(*), profiles!inner(*)');
+          .select('*, category:categories(*), location:locations(*), reporterProfile:profiles!items_reporter_id_fkey(*)');
 
-      // 1. Terapkan filter reporterId jika ada (untuk "Laporan Saya").
       if (reporterId != null && reporterId.isNotEmpty) {
         queryBuilder = queryBuilder.eq('reporter_id', reporterId);
       }
       
-      // 2. Terapkan filter reportType jika ada.
       if (reportType != null && reportType.isNotEmpty) {
         queryBuilder = queryBuilder.eq('report_type', reportType);
       }
 
-      // 3. Terapkan filter status secara kondisional.
       if (status != null && status.isNotEmpty) {
         queryBuilder = queryBuilder.eq('status', status);
       } else {
-        // PERBAIKAN UTAMA: Hanya filter status jika kita TIDAK sedang mencari laporan milik seseorang.
         if (reporterId == null || reporterId.isEmpty) {
            queryBuilder = queryBuilder.inFilter('status', [
-            'hilang',
-            'ditemukan_tersedia',
-          ]);
+             'hilang',
+             'ditemukan_tersedia',
+           ]);
         }
-        // Jika reporterId ada isinya, JANGAN filter status, agar semua laporannya (termasuk yang sudah diklaim) bisa terlihat.
       }
       
-      // Filter lainnya
       if (categoryId != null && categoryId.isNotEmpty) {
         queryBuilder = queryBuilder.eq('category_id', categoryId);
       }
@@ -189,25 +257,6 @@ class ItemRemoteDataSourceImpl implements ItemRemoteDataSource {
   }
   
   @override
-  Future<ItemModel> getItemDetails(String itemId) async {
-     try {
-      final response = await supabaseClient
-          .from('items')
-          .select('*, profiles!inner(*), categories(*), locations(*)')
-          .eq('id', itemId)
-          .single();
-      return ItemModel.fromJson(response);
-    } on PostgrestException catch (e) {
-      if (e.code == 'PGRST116') {
-        throw ServerException(message: "Barang tidak ditemukan.");
-      }
-      throw ServerException(message: "Gagal mengambil detail barang: ${e.message}");
-    } catch (e) {
-      throw ServerException(message: "Terjadi kesalahan: ${e.toString()}");
-    }
-  }
-
-  @override
   Future<ItemModel> claimItemViaQr({required String qrCodeData, required String claimerId}) async {
     try {
       final response = await supabaseClient.rpc(
@@ -223,22 +272,20 @@ class ItemRemoteDataSourceImpl implements ItemRemoteDataSource {
   }
   
   @override
-  Future<List<ClaimHistoryEntryModel>> getGlobalClaimHistory() async {
+  Future<void> submitGuestClaim(SubmitGuestClaimParams params) async {
     try {
-      final response = await supabaseClient.from('claims').select('''
-        claimed_at,
-        item:items!inner (*, categories(*), locations(*), profiles!inner(*)),
-        claimer:profiles!claims_claimer_id_fkey!inner (*),
-        security_reporter:profiles!claims_reported_by_id_fkey!inner (*)
-      ''').order('claimed_at', ascending: false);
-
-      return (response as List)
-          .map((json) => ClaimHistoryEntryModel.fromJson(json))
-          .toList();
+      await supabaseClient.rpc(
+        'process_guest_claim',
+        params: {
+          'p_item_id': params.itemId,
+          'p_security_id': params.securityId,
+          'p_guest_details': params.guestDetails,
+        },
+      );
     } on PostgrestException catch (e) {
-      throw ServerException(message: "Gagal mengambil riwayat: ${e.message}");
+      throw ServerException(message: "Gagal memproses klaim tamu: ${e.message}");
     } catch (e) {
-      throw ServerException(message: "Gagal mengambil riwayat klaim global: ${e.toString()}");
+      throw ServerException(message: "Terjadi kesalahan saat proses klaim: ${e.toString()}");
     }
   }
 
@@ -263,7 +310,7 @@ class ItemRemoteDataSourceImpl implements ItemRemoteDataSource {
           .from('items')
           .update(dataToUpdate)
           .eq('id', item.id)
-          .select('*, profiles!inner(*), categories(*), locations(*)')
+          .select('*, reporterProfile:profiles!items_reporter_id_fkey(*), category:categories(*), location:locations(*)')
           .single();
       return ItemModel.fromJson(response);
     } on PostgrestException catch (e) {
@@ -280,7 +327,7 @@ class ItemRemoteDataSourceImpl implements ItemRemoteDataSource {
     } on PostgrestException catch (e) {
       throw ServerException(message: "Gagal menghapus barang: ${e.message}");
     } catch (e) {
-      throw ServerException(message: "Terjadi kesalahan: ${e.toString()}");
+      throw ServerException(message: "Terjadi kesalahan saat menghapus barang: ${e.toString()}");
     }
   }
 }

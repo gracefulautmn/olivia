@@ -29,7 +29,6 @@ class SearchItemsBloc extends Bloc<SearchItemsEvent, SearchItemsState> {
     on<LoadSearchFiltersAndPerformInitialSearch>(_onLoadSearchFiltersAndPerformInitialSearch);
     on<PerformSearchQuery>(_onPerformSearchQuery);
     on<ApplySearchFilters>(_onApplySearchFilters);
-    on<ClearAllSearchAndFilters>(_onClearAllSearchAndFilters);
   }
 
   Future<void> _onLoadSearchFiltersAndPerformInitialSearch(
@@ -45,13 +44,10 @@ class SearchItemsBloc extends Bloc<SearchItemsEvent, SearchItemsState> {
     Failure? loadingFailure;
 
     categoriesResult.fold((failure) => loadingFailure = failure, (data) => categories = data);
+    locationsResult.fold((failure) => loadingFailure = failure, (data) => locations = data);
+    
     if (loadingFailure != null) {
       emit(state.copyWith(status: SearchStatus.failure, failure: loadingFailure));
-      return;
-    }
-    locationsResult.fold((failure) => loadingFailure = failure, (data) => locations = data);
-    if (loadingFailure != null) {
-      emit(state.copyWith(status: SearchStatus.failure, failure: loadingFailure, availableCategories: categories));
       return;
     }
     
@@ -62,8 +58,6 @@ class SearchItemsBloc extends Bloc<SearchItemsEvent, SearchItemsState> {
       query: event.initialQuery,
       selectedCategory: initialSelectedCategory,
       selectedLocation: initialSelectedLocation,
-      selectedReportType: event.initialReportType,
-      reporterId: event.initialReporterId,
       availableCategories: categories,
       availableLocations: locations,
     ));
@@ -73,8 +67,6 @@ class SearchItemsBloc extends Bloc<SearchItemsEvent, SearchItemsState> {
     final queryToUse = event.query ?? state.currentQuery;
     final categoryToUse = event.selectedCategory ?? state.selectedCategory;
     final locationToUse = event.selectedLocation ?? state.selectedLocation;
-    final reportTypeToUse = event.selectedReportType ?? state.selectedReportType;
-    final reporterIdToUse = event.reporterId ?? state.reporterId;
     final availableCategoriesToUse = event.availableCategories ?? state.availableCategories;
     final availableLocationsToUse = event.availableLocations ?? state.availableLocations;
 
@@ -83,33 +75,18 @@ class SearchItemsBloc extends Bloc<SearchItemsEvent, SearchItemsState> {
       currentQuery: queryToUse,
       selectedCategory: categoryToUse,
       selectedLocation: locationToUse,
-      selectedReportType: reportTypeToUse,
-      reporterId: reporterIdToUse,
+      selectedReportType: 'penemuan', // Selalu 'penemuan'
       availableCategories: availableCategoriesToUse,
       availableLocations: availableLocationsToUse,
       clearFailure: true,
     ));
 
-    // ===>>> PERBAIKAN UTAMA DI SINI <<<===
-    // Tentukan status filter secara dinamis.
-    // Hanya filter status jika kita secara spesifik mencari barang 'penemuan'.
-    // Jika tidak (misalnya saat melihat 'Laporan Saya'), jangan filter statusnya.
-    final String? statusToUse;
-    if (reportTypeToUse == 'penemuan') {
-      statusToUse = 'ditemukan_tersedia';
-    } else {
-      // Untuk 'kehilangan' atau jika tidak ada filter reportType, jangan filter status.
-      // Ini memungkinkan kita melihat semua status laporan kita di halaman riwayat.
-      statusToUse = null;
-    }
-
     final result = await _searchItemsUseCase(SearchItemsParams(
       query: queryToUse,
       categoryId: categoryToUse?.id,
       locationId: locationToUse?.id,
-      reportType: reportTypeToUse,
-      reporterId: reporterIdToUse,
-      status: statusToUse, // Menggunakan status filter yang dinamis
+      reportType: 'penemuan', // Selalu cari 'penemuan'
+      status: 'ditemukan_tersedia', // dan yang statusnya 'tersedia'
     ));
 
     result.fold(
@@ -127,28 +104,12 @@ class SearchItemsBloc extends Bloc<SearchItemsEvent, SearchItemsState> {
         ? state.availableLocations.firstWhereOrNull((l) => l.id == event.locationIdToSet)
         : null;
     
-    final reportTypeToKeep = event.reportTypeToSet ?? state.selectedReportType;
-    
     add(PerformSearchQuery(
       query: state.currentQuery,
       selectedCategory: newSelectedCategory,
       selectedLocation: newSelectedLocation,
-      selectedReportType: reportTypeToKeep,
-      reporterId: state.reporterId,
       availableCategories: state.availableCategories,
       availableLocations: state.availableLocations,
-    ));
-  }
-
-  void _onClearAllSearchAndFilters(ClearAllSearchAndFilters event, Emitter<SearchItemsState> emit) {
-    emit(state.copyWith(
-      status: SearchStatus.loaded,
-      items: [],
-      currentQuery: '',
-      selectedCategory: null,
-      selectedLocation: null,
-      selectedReportType: null, // Reset juga ini
-      reporterId: null,
     ));
   }
 }

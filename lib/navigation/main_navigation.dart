@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:olivia/core/utils/app_colors.dart';
+import 'package:olivia/core/utils/enums.dart'; // Pastikan UserRole ada di sini
+import 'package:olivia/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:olivia/features/history/presentation/pages/history_page.dart';
-import 'package:olivia/features/home/presentation/pages/home_page.dart'; // Ganti dengan HomePage jika sudah ada
+import 'package:olivia/features/home/presentation/pages/home_page.dart';
+// Impor halaman klaim manual yang baru
+import 'package:olivia/features/item/presentation/pages/manual_claim_page.dart'; 
 import 'package:olivia/features/item/presentation/pages/report_item_page.dart';
 import 'package:olivia/features/item/presentation/pages/scan_qr_page.dart';
 import 'package:olivia/features/notification/presentation/pages/notification_page.dart';
@@ -21,16 +26,20 @@ class MainNavigationScaffold extends StatefulWidget {
 class _MainNavigationScaffoldState extends State<MainNavigationScaffold> {
   int _calculateSelectedIndex(BuildContext context) {
     final String location = GoRouterState.of(context).matchedLocation;
-    if (location.startsWith(MainNavigationScaffold.routeName) &&
-        (location == MainNavigationScaffold.routeName ||
-            location.startsWith(HomePage.routeName))) {
+    // Dapatkan peran pengguna dari AuthBloc
+    final userRole = context.read<AuthBloc>().state.user?.role;
+
+    if (location.startsWith(HomePage.routeName) || location == MainNavigationScaffold.routeName) {
       return 0;
     }
     if (location.startsWith(ReportItemPage.routeName)) {
       return 1;
     }
-    if (location.startsWith(ScanQrPage.routeName)) {
-      return 2;
+    // Logika kondisional untuk indeks ke-2
+    if (userRole == UserRole.keamanan) {
+      if (location.startsWith(ManualClaimPage.routeName)) return 2;
+    } else {
+      if (location.startsWith(ScanQrPage.routeName)) return 2;
     }
     if (location.startsWith(NotificationPage.routeName)) {
       return 3;
@@ -42,17 +51,23 @@ class _MainNavigationScaffoldState extends State<MainNavigationScaffold> {
   }
 
   void _onItemTapped(int index, BuildContext context) {
+    // Dapatkan peran pengguna dari AuthBloc
+    final userRole = context.read<AuthBloc>().state.user?.role;
+
     switch (index) {
       case 0:
-        GoRouter.of(
-          context,
-        ).go(MainNavigationScaffold.routeName); // Atau HomePage.routeName
+        GoRouter.of(context).go(HomePage.routeName);
         break;
       case 1:
         GoRouter.of(context).go(ReportItemPage.routeName);
         break;
       case 2:
-        GoRouter.of(context).go(ScanQrPage.routeName);
+        // Logika kondisional untuk navigasi
+        if (userRole == UserRole.keamanan) {
+          GoRouter.of(context).go(ManualClaimPage.routeName);
+        } else {
+          GoRouter.of(context).go(ScanQrPage.routeName);
+        }
         break;
       case 3:
         GoRouter.of(context).go(NotificationPage.routeName);
@@ -65,39 +80,50 @@ class _MainNavigationScaffoldState extends State<MainNavigationScaffold> {
 
   @override
   Widget build(BuildContext context) {
+    // Tonton perubahan pada AuthBloc untuk membangun ulang UI jika perlu
+    final userRole = context.watch<AuthBloc>().state.user?.role;
+    final bool isSecurity = userRole == UserRole.keamanan;
+
     return Scaffold(
       body:
-          widget
-              .child, // Ini akan menampilkan halaman yang sesuai dengan rute GoRouter
+          widget.child, // Menampilkan halaman yang sesuai dengan rute GoRouter
       bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed, // Agar semua label terlihat
+        type: BottomNavigationBarType.fixed,
         backgroundColor: Colors.white,
         selectedItemColor: AppColors.primaryColor,
         unselectedItemColor: AppColors.subtleTextColor,
         currentIndex: _calculateSelectedIndex(context),
         onTap: (index) => _onItemTapped(index, context),
-        items: const <BottomNavigationBarItem>[
-          BottomNavigationBarItem(
+        items: <BottomNavigationBarItem>[
+          const BottomNavigationBarItem(
             icon: Icon(Icons.home_outlined),
             activeIcon: Icon(Icons.home),
             label: 'Beranda',
           ),
-          BottomNavigationBarItem(
+          const BottomNavigationBarItem(
             icon: Icon(Icons.add_box_outlined),
             activeIcon: Icon(Icons.add_box),
             label: 'Lapor',
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.qr_code_scanner_outlined),
-            activeIcon: Icon(Icons.qr_code_scanner),
-            label: 'Scan',
-          ),
-          BottomNavigationBarItem(
+          // --- ITEM NAVIGASI DINAMIS ---
+          if (isSecurity)
+            const BottomNavigationBarItem(
+              icon: Icon(Icons.edit),
+              activeIcon: Icon(Icons.edit),
+              label: 'Klaim',
+            )
+          else
+            const BottomNavigationBarItem(
+              icon: Icon(Icons.qr_code_scanner_outlined),
+              activeIcon: Icon(Icons.qr_code_scanner),
+              label: 'Scan',
+            ),
+          const BottomNavigationBarItem(
             icon: Icon(Icons.notifications_outlined),
             activeIcon: Icon(Icons.notifications),
             label: 'Notifikasi',
           ),
-          BottomNavigationBarItem(
+          const BottomNavigationBarItem(
             icon: Icon(Icons.history_outlined),
             activeIcon: Icon(Icons.history),
             label: 'Riwayat',

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:olivia/core/di/service_locator.dart';
 import 'package:olivia/features/auth/presentation/bloc/auth_bloc.dart';
@@ -8,9 +9,12 @@ import 'package:olivia/features/auth/presentation/pages/signup_page.dart';
 import 'package:olivia/features/chat/presentation/pages/chat_detail_page.dart';
 import 'package:olivia/features/chat/presentation/pages/chat_list_page.dart';
 import 'package:olivia/features/history/presentation/pages/history_page.dart';
+import 'package:olivia/features/home/presentation/bloc/home_bloc.dart';
 import 'package:olivia/features/home/presentation/pages/home_page.dart';
+import 'package:olivia/features/item/domain/entities/item.dart';
 import 'package:olivia/features/item/presentation/pages/item_detail_page.dart';
 import 'package:olivia/features/feedback/presentation/pages/feedback_page.dart';
+import 'package:olivia/features/item/presentation/pages/manual_claim_page.dart';
 import 'package:olivia/features/item/presentation/pages/report_item_page.dart';
 import 'package:olivia/features/item/presentation/pages/scan_qr_page.dart';
 import 'package:olivia/features/item/presentation/pages/search_results_page.dart';
@@ -36,17 +40,19 @@ class AppRouter {
         final bool isLoggedIn =
             authBloc.state.status == AuthStatus.authenticated;
         final String targetLocation = state.matchedLocation;
-        final unprotectedRoutes = [LoginPage.routeName, SignUpPage.routeName];
+        
+        final bool isGoingToUnprotectedRoute = 
+            targetLocation == LoginPage.routeName || 
+            targetLocation == SignUpPage.routeName;
 
-        if (isLoggedIn) {
-          if (unprotectedRoutes.contains(targetLocation)) {
-            return MainNavigationScaffold.routeName;
-          }
-        } else {
-          if (!unprotectedRoutes.contains(targetLocation)) {
-            return LoginPage.routeName;
-          }
+        if (!isLoggedIn && !isGoingToUnprotectedRoute) {
+          return LoginPage.routeName;
         }
+        
+        if (isLoggedIn && isGoingToUnprotectedRoute) {
+          return HomePage.routeName;
+        }
+        
         return null;
       },
       routes: <RouteBase>[
@@ -67,36 +73,28 @@ class AppRouter {
           },
           routes: <RouteBase>[
             GoRoute(
-              path: MainNavigationScaffold.routeName,
-              name: MainNavigationScaffold.routeName,
+              path: HomePage.routeName,
+              name: HomePage.routeName,
               builder: (BuildContext context, GoRouterState state) {
-                return const HomePage();
-              },
-              routes: <RouteBase>[
-                GoRoute(
-                  path: 'profile',
-                  name: ProfilePage.routeName,
-                  builder: (context, state) => const ProfilePage(),
-                ),
-              ],
-            ),
-            GoRoute(
-              path: ReportItemPage.routeName,
-              name: ReportItemPage.routeName,
-              builder: (BuildContext context, GoRouterState state) {
-                return const ReportItemPage();
+                return BlocProvider.value(
+                  value: sl<HomeBloc>()..add(FetchHomeData()),
+                  child: const HomePage(),
+                );
               },
             ),
-            GoRoute(
-              path: FeedbackPage.routeName, // Contoh: /feedback
-              name: FeedbackPage.routeName,
-              builder: (context, state) => const FeedbackPage(),
-            ),
+            // Halaman lain di dalam Shell
             GoRoute(
               path: ScanQrPage.routeName,
               name: ScanQrPage.routeName,
               builder: (BuildContext context, GoRouterState state) {
                 return const ScanQrPage();
+              },
+            ),
+            GoRoute(
+              path: ManualClaimPage.routeName,
+              name: ManualClaimPage.routeName,
+              builder: (BuildContext context, GoRouterState state) {
+                return const ManualClaimPage();
               },
             ),
             GoRoute(
@@ -115,6 +113,21 @@ class AppRouter {
             ),
           ],
         ),
+        // --- PERBAIKAN: Pindahkan ReportItemPage ke luar ShellRoute ---
+        GoRoute(
+          path: ReportItemPage.routeName,
+          name: ReportItemPage.routeName,
+          builder: (BuildContext context, GoRouterState state) {
+            final itemToEdit = state.extra as ItemEntity?;
+            return ReportItemPage(itemToEdit: itemToEdit);
+          },
+        ),
+        // Rute lain di luar Shell
+        GoRoute(
+          path: ProfilePage.routeName,
+          name: ProfilePage.routeName,
+          builder: (context, state) => const ProfilePage(),
+        ),
         GoRoute(
           path: ItemDetailPage.routeName,
           name: ItemDetailPage.routeName,
@@ -130,7 +143,6 @@ class AppRouter {
             final query = state.uri.queryParameters['query'];
             final categoryId = state.uri.queryParameters['categoryId'];
             final locationId = state.uri.queryParameters['locationId'];
-            // reportType tidak lagi diperlukan di sini
             return SearchResultsPage(
               initialQuery: query,
               categoryId: categoryId,
@@ -144,7 +156,7 @@ class AppRouter {
           builder: (context, state) => const ChatListPage(),
         ),
         GoRoute(
-          path: ChatDetailPage.routeName, // Contoh: /chat/:chatRoomId
+          path: ChatDetailPage.routeName,
           name: ChatDetailPage.routeName,
           builder: (context, state) {
             final chatRoomId = state.pathParameters['chatRoomId'];
@@ -153,7 +165,6 @@ class AppRouter {
                 state.uri.queryParameters['recipientName'] ?? 'Chat';
             final itemId = state.uri.queryParameters['itemId'];
 
-            // Cek jika kita sedang membuat chat BARU.
             if (chatRoomId == 'new' && (recipientId == null || recipientId.isEmpty)) {
               return const Scaffold(
                   body: Center(
@@ -162,15 +173,16 @@ class AppRouter {
 
             return ChatDetailPage(
               chatRoomId: chatRoomId,
-              // PERBAIKAN: Berikan string kosong jika recipientId null.
-              // Ini akan memenuhi syarat non-nullable dari parameter.
-              // Logika di dalam ChatDetailPage diasumsikan akan memprioritaskan chatRoomId
-              // jika recipientId yang diterima adalah string kosong.
               recipientId: recipientId ?? '',
               recipientName: recipientName,
               itemId: itemId,
             );
           },
+        ),
+         GoRoute(
+          path: FeedbackPage.routeName,
+          name: FeedbackPage.routeName,
+          builder: (context, state) => const FeedbackPage(),
         ),
       ],
     );

@@ -8,8 +8,8 @@ import 'package:olivia/features/item/data/datasources/item_remote_data_source.da
 import 'package:olivia/features/item/data/models/item_model.dart';
 import 'package:olivia/features/item/domain/entities/item.dart';
 import 'package:olivia/features/item/domain/repositories/item_repository.dart';
+import 'package:olivia/features/item/domain/usecases/submit_guest_claim.dart';
 
-// Asumsi Anda mendaftarkan ini di service_locator
 class ItemRepositoryImpl implements ItemRepository {
   final ItemRemoteDataSource remoteDataSource;
   // final NetworkInfo networkInfo; // Anda bisa mengaktifkan ini kembali jika diperlukan
@@ -19,6 +19,8 @@ class ItemRepositoryImpl implements ItemRepository {
     // required this.networkInfo,
   });
   
+  // ... (implementasi metode lain yang sudah ada tidak diubah) ...
+
   @override
   Future<Either<Failure, ItemEntity>> reportItem({
     required String reporterId,
@@ -45,13 +47,10 @@ class ItemRepositoryImpl implements ItemRepository {
       );
       return Right(itemModel);
     } on ServerException catch (e) {
-      // PERBAIKAN: Menggunakan parameter posisional
       return Left(ServerFailure(e.message));
     } on AuthException catch (e) {
-      // PERBAIKAN: Menggunakan parameter posisional
       return Left(AuthFailure(e.message));
     } catch (e) {
-      // PERBAIKAN: Menggunakan parameter posisional
       return Left(
         UnknownFailure("An unexpected error occurred: ${e.toString()}"),
       );
@@ -64,10 +63,8 @@ class ItemRepositoryImpl implements ItemRepository {
       final itemModel = await remoteDataSource.getItemDetails(itemId);
       return Right(itemModel);
     } on ServerException catch (e) {
-      // PERBAIKAN: Menggunakan parameter posisional
       return Left(ServerFailure(e.message));
     } catch (e) {
-      // PERBAIKAN: Menggunakan parameter posisional
       return Left(
         UnknownFailure("An unexpected error occurred: ${e.toString()}"),
       );
@@ -98,10 +95,8 @@ class ItemRepositoryImpl implements ItemRepository {
       );
       return Right(itemModels);
     } on ServerException catch (e) {
-      // PERBAIKAN: Menggunakan parameter posisional
       return Left(ServerFailure(e.message));
     } catch (e) {
-      // PERBAIKAN: Menggunakan parameter posisional
       return Left(
         UnknownFailure("An unexpected error occurred: ${e.toString()}"),
       );
@@ -120,10 +115,8 @@ class ItemRepositoryImpl implements ItemRepository {
       );
       return Right(itemModel);
     } on ServerException catch (e) {
-      // PERBAIKAN: Menggunakan parameter posisional
       return Left(ServerFailure(e.message));
     } catch (e) {
-      // PERBAIKAN: Menggunakan parameter posisional
       return Left(
         UnknownFailure("An unexpected error occurred: ${e.toString()}"),
       );
@@ -136,10 +129,8 @@ class ItemRepositoryImpl implements ItemRepository {
       final historyModels = await remoteDataSource.getGlobalClaimHistory();
       return Right(historyModels);
     } on ServerException catch (e) {
-      // PERBAIKAN: Menggunakan parameter posisional
       return Left(ServerFailure(e.message));
     } catch (e) {
-      // PERBAIKAN: Menggunakan parameter posisional
       return Left(UnknownFailure("Gagal mengambil riwayat global: ${e.toString()}"));
     }
   }
@@ -158,10 +149,8 @@ class ItemRepositoryImpl implements ItemRepository {
       );
       return Right(updatedItemModel);
     } on ServerException catch (e) {
-      // PERBAIKAN: Menggunakan parameter posisional
       return Left(ServerFailure(e.message));
     } catch (e) {
-      // PERBAIKAN: Menggunakan parameter posisional
       return Left(
         UnknownFailure("An unexpected error occurred: ${e.toString()}"),
       );
@@ -174,13 +163,25 @@ class ItemRepositoryImpl implements ItemRepository {
       await remoteDataSource.deleteItem(itemId);
       return const Right(null);
     } on ServerException catch (e) {
-      // PERBAIKAN: Menggunakan parameter posisional
       return Left(ServerFailure(e.message));
     } catch (e) {
-      // PERBAIKAN: Menggunakan parameter posisional
       return Left(
         UnknownFailure("An unexpected error occurred: ${e.toString()}"),
       );
+    }
+  }
+
+  // --- IMPLEMENTASI METODE BARU ---
+  @override
+  Future<Either<Failure, void>> submitGuestClaim(SubmitGuestClaimParams params) async {
+    try {
+      // Meneruskan panggilan ke remote data source
+      await remoteDataSource.submitGuestClaim(params);
+      return const Right(null); // Mengembalikan Right(null) untuk Future<void>
+    } on ServerException catch (e) {
+      return Left(ServerFailure(e.message));
+    } catch (e) {
+      return Left(UnknownFailure("Gagal memproses klaim tamu: ${e.toString()}"));
     }
   }
 }

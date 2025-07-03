@@ -12,7 +12,7 @@ class AppColors {
   static const Color errorColor = Color(0xFFF44336); // Red for urgent items
   
   // Neutral colors
-  static const Color backgroundColor = Color(0xFFFAFAFA);
+  static const Color backgroundColor = Color(0xFFFFFFFF);
   static const Color surfaceColor = Color(0xFFFFFFFF);
   static const Color cardColor = Color(0xFFFFFFFF);
   

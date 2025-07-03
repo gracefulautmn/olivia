@@ -17,6 +17,8 @@ class ReportItemState extends Equatable {
   final List<CategoryEntity> categories;
   final List<LocationEntity> locations;
 
+  // --- PENAMBAHAN UNTUK MODE EDIT ---
+  final String? initialImageUrl; // Untuk menampilkan gambar lama saat edit
 
   const ReportItemState({
     this.status = ReportItemStatus.initial,
@@ -30,6 +32,7 @@ class ReportItemState extends Equatable {
     this.reportedItem,
     this.categories = const [],
     this.locations = const [],
+    this.initialImageUrl, // Tambahkan di konstruktor
   });
 
   ReportItemState copyWith({
@@ -38,16 +41,17 @@ class ReportItemState extends Equatable {
     String? itemName,
     String? description,
     CategoryEntity? selectedCategory,
-    bool clearSelectedCategory = false, // Untuk menghapus pilihan
+    bool clearSelectedCategory = false,
     LocationEntity? selectedLocation,
-    bool clearSelectedLocation = false, // Untuk menghapus pilihan
+    bool clearSelectedLocation = false,
     File? imageFile,
-    bool clearImageFile = false, // Untuk menghapus pilihan
+    bool clearImageFile = false,
     Failure? failure,
     bool clearFailure = false,
     ItemEntity? reportedItem,
     List<CategoryEntity>? categories,
     List<LocationEntity>? locations,
+    String? initialImageUrl, // Tambahkan di copyWith
   }) {
     return ReportItemState(
       status: status ?? this.status,
@@ -61,6 +65,7 @@ class ReportItemState extends Equatable {
       reportedItem: reportedItem ?? this.reportedItem,
       categories: categories ?? this.categories,
       locations: locations ?? this.locations,
+      initialImageUrl: initialImageUrl ?? this.initialImageUrl, // Tambahkan di copyWith
     );
   }
 
@@ -77,8 +82,8 @@ class ReportItemState extends Equatable {
         reportedItem,
         categories,
         locations,
+        initialImageUrl, // Tambahkan ke props
       ];
 
-  // Helper untuk validasi form sederhana
-  bool get isFormValid => itemName.isNotEmpty && (selectedCategory != null || reportType == ReportType.kehilangan) && (selectedLocation != null || reportType == ReportType.kehilangan) ;
+  bool get isFormValid => itemName.isNotEmpty && (selectedCategory != null || reportType == ReportType.kehilangan) && (selectedLocation != null);
 }

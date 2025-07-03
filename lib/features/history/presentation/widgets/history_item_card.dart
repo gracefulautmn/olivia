@@ -2,12 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:olivia/core/utils/app_colors.dart';
-import 'package:olivia/core/utils/enums.dart';
-import 'package:olivia/features/auth/domain/entities/user_profile.dart'; // Untuk current user
-import 'package:olivia/features/auth/presentation/bloc/auth_bloc.dart'; // Untuk akses current user
+// Hapus import enums jika tidak digunakan di file ini
+// import 'package:olivia/core/utils/enums.dart'; 
+import 'package:olivia/features/auth/domain/entities/user_profile.dart';
+import 'package:olivia/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:olivia/features/item/domain/entities/item.dart';
 import 'package:olivia/features/item/presentation/pages/item_detail_page.dart';
-import 'package:flutter_bloc/flutter_bloc.dart'; // Untuk akses AuthBloc
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 class HistoryItemCard extends StatelessWidget {
   final ItemEntity item;
@@ -21,16 +22,21 @@ class HistoryItemCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final authState = context.watch<AuthBloc>().state;
-    final UserProfile? currentUser = authState.user;
-
     String claimerName = item.claimerProfile?.fullName ?? 'Seseorang';
     String reporterName = item.reporterProfile?.fullName ?? 'Seseorang';
 
+    // --- PERBAIKAN FINAL ---
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
-      elevation: 1.5,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      elevation: 4,
+      shadowColor: Colors.black.withOpacity(0.1), 
+      color: Colors.white, 
+      // --- TAMBAHAN INI UNTUK MENGATASI WARNA TINT UNGU/PINK DARI MATERIAL 3 ---
+      surfaceTintColor: Colors.white, 
+      clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: () {
           context.pushNamed(
@@ -38,7 +44,6 @@ class HistoryItemCard extends StatelessWidget {
             pathParameters: {'itemId': item.id},
           );
         },
-        borderRadius: BorderRadius.circular(10),
         child: Padding(
           padding: const EdgeInsets.all(12.0),
           child: Column(
@@ -48,24 +53,32 @@ class HistoryItemCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Gambar
-                  Container(
-                    width: 70,
-                    height: 70,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(8),
-                      image: item.imageUrl != null && item.imageUrl!.isNotEmpty
-                          ? DecorationImage(
-                              image: NetworkImage(item.imageUrl!),
+                  ClipRRect(
+                     borderRadius: BorderRadius.circular(8),
+                     child: Container(
+                      width: 70,
+                      height: 70,
+                      color: Colors.grey[200],
+                      child: item.imageUrl != null && item.imageUrl!.isNotEmpty
+                          ? Image.network(
+                              item.imageUrl!,
                               fit: BoxFit.cover,
+                              // Menambahkan frameBuilder untuk loading dan error
+                              frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+                                if (wasSynchronouslyLoaded) return child;
+                                return AnimatedOpacity(
+                                  opacity: frame == null ? 0 : 1,
+                                  duration: const Duration(seconds: 1),
+                                  curve: Curves.easeOut,
+                                  child: child,
+                                );
+                              },
+                              errorBuilder: (context, error, stackTrace) {
+                                 return Icon(Icons.image_not_supported, color: Colors.grey[400], size: 24);
+                              },
                             )
-                          : null,
-                      color: item.imageUrl == null || item.imageUrl!.isEmpty
-                          ? Colors.grey[200]
-                          : null,
+                          : Icon(Icons.image_not_supported, color: Colors.grey[400], size: 24),
                     ),
-                    child: item.imageUrl == null || item.imageUrl!.isEmpty
-                        ? Icon(Icons.image_not_supported, color: Colors.grey[400], size: 24)
-                        : null,
                   ),
                   const SizedBox(width: 12),
                   // Info Utama
@@ -75,7 +88,7 @@ class HistoryItemCard extends StatelessWidget {
                       children: [
                         Text(
                           item.itemName,
-                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textColor),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -98,14 +111,14 @@ class HistoryItemCard extends StatelessWidget {
                   ),
                   // Status (selalu 'Diklaim' di halaman riwayat)
                   Chip(
-                    label: const Text('Diklaim', style: TextStyle(fontSize: 10, color: Colors.white)),
+                    label: const Text('Diklaim', style: TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.bold)),
                     backgroundColor: Colors.redAccent.shade200,
                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 0),
                     visualDensity: VisualDensity.compact,
                   ),
                 ],
               ),
-              const Divider(height: 20, thickness: 0.5),
+              const Divider(height: 24, thickness: 0.5),
               // Informasi Klaim/Temuan
               if (isViewedByClaimer) ...[ // Tab "Diklaim Saya"
                 _buildHistoryDetailRow(
@@ -117,10 +130,10 @@ class HistoryItemCard extends StatelessWidget {
                   _buildHistoryDetailRow(
                     icon: Icons.calendar_today_outlined,
                     label: 'Tanggal Diklaim',
-                    value: DateFormat('dd MMM yyyy, HH:mm').format(item.claimedAt!),
+                    value: DateFormat('dd MMM yy, HH:mm', 'id_ID').format(item.claimedAt!),
                   ),
               ] else ...[ // Tab "Ditemukan Saya"
-                 _buildHistoryDetailRow(
+                  _buildHistoryDetailRow(
                   icon: Icons.person_search_outlined,
                   label: 'Diklaim oleh',
                   value: claimerName,
@@ -129,12 +142,12 @@ class HistoryItemCard extends StatelessWidget {
                   _buildHistoryDetailRow(
                     icon: Icons.calendar_today_outlined,
                     label: 'Tanggal Diklaim',
-                    value: DateFormat('dd MMM yyyy, HH:mm').format(item.claimedAt!),
+                    value: DateFormat('dd MMM yy, HH:mm', 'id_ID').format(item.claimedAt!),
                   ),
-                 _buildHistoryDetailRow(
+                  _buildHistoryDetailRow(
                     icon: Icons.report_outlined,
                     label: 'Anda Laporkan Pada',
-                    value: DateFormat('dd MMM yyyy, HH:mm').format(item.reportedAt!),
+                    value: DateFormat('dd MMM yy, HH:mm', 'id_ID').format(item.reportedAt!),
                   ),
               ],
             ],
@@ -151,12 +164,13 @@ class HistoryItemCard extends StatelessWidget {
         children: [
           Icon(icon, size: 16, color: AppColors.subtleTextColor),
           const SizedBox(width: 8),
-          Text('$label: ', style: TextStyle(fontSize: 13, color: AppColors.subtleTextColor)),
+          Text('$label: ', style: const TextStyle(fontSize: 13, color: AppColors.subtleTextColor)),
           Expanded(
             child: Text(
               value,
               style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textColor),
               overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.right,
             ),
           ),
         ],

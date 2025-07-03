@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:olivia/core/di/service_locator.dart';
-import 'package:olivia/features/chat/presentation/pages/chat_detail_page.dart';
-import 'package:olivia/features/feedback/presentation/pages/feedback_page.dart';
 import 'package:olivia/features/home/presentation/bloc/home_bloc.dart';
 import 'package:olivia/features/home/presentation/widgets/categories_list_widget.dart';
 import 'package:olivia/features/home/presentation/widgets/items_carousel_widget.dart';
@@ -14,130 +11,73 @@ import 'package:olivia/features/item/presentation/pages/search_results_page.dart
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
 
+  // --- PERBAIKAN 1: Sesuaikan definisi rute agar cocok dengan AppRouter ---
   static const String routeName = '/home';
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (context) => sl<HomeBloc>()..add(FetchHomeData()),
-      // PERBAIKAN: Bungkus dengan Scaffold di sini untuk menempatkan FAB
-      child: Scaffold(
-        body: BlocBuilder<HomeBloc, HomeState>(
-          builder: (context, state) {
-            if (state is HomeLoading) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            if (state is HomeError) {
-              return Center(child: Text('Error: ${state.message}'));
-            }
-            if (state is HomeLoaded) {
-              return RefreshIndicator(
-                onRefresh: () async {
-                  context.read<HomeBloc>().add(FetchHomeData());
-                },
-                child: CustomScrollView(
-                  slivers: <Widget>[
-                    SliverToBoxAdapter(
-                      child: _buildHeaderWithOverlay(context),
-                    ),
-                    SliverList(
-                      delegate: SliverChildListDelegate(
-                        [
-                          CategoriesListWidget(categories: state.categories),
-                          Container(
-                            margin: const EdgeInsets.symmetric(
-                                horizontal: 16.0, vertical: 20.0),
-                            padding: const EdgeInsets.all(16.0),
-                            decoration: BoxDecoration(
-                                color: Colors.blue[50],
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: Colors.blue.shade200)),
-                            child: const Text(
-                              'Jaga barang bawaan Anda dengan baik. Kehilangan dapat merepotkan!',
-                              textAlign: TextAlign.center,
-                              style:
-                                  TextStyle(fontSize: 15, color: Colors.blueGrey),
-                            ),
-                          ),
-                          LocationsListWidget(locations: state.locations),
-                          const SizedBox(height: 20),
-                          if (state.recentFoundItems.isNotEmpty)
-                            ItemsCarouselWidget(
-                              title: 'Temuan Barang Terbaru',
-                              items: state.recentFoundItems,
-                              onSeeAll: () {
-                                context.pushNamed(
-                                  SearchResultsPage.routeName,
-                                  queryParameters: {'reportType': 'penemuan'},
-                                );
-                              },
-                            ),
-                          // Hapus bagian Laporan Kehilangan jika tidak ingin ditampilkan di sini
-                          // if (state.recentLostItems.isNotEmpty)
-                          
-                          const SizedBox(height: 80), // Space untuk FAB
-                        ],
-                      ),
-                    ),
-                  ],
+    // --- PERBAIKAN 2: Hapus Scaffold dari sini ---
+    // Scaffold utama sekarang disediakan oleh MainNavigationScaffold.
+    return BlocBuilder<HomeBloc, HomeState>(
+      builder: (context, state) {
+        if (state is HomeLoading) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (state is HomeError) {
+          return Center(child: Text('Error: ${state.message}'));
+        }
+        if (state is HomeLoaded) {
+          return RefreshIndicator(
+            onRefresh: () async {
+              context.read<HomeBloc>().add(FetchHomeData());
+            },
+            child: CustomScrollView(
+              slivers: <Widget>[
+                SliverToBoxAdapter(
+                  child: _buildHeaderWithOverlay(context),
                 ),
-              );
-            }
-            return const Center(
-                child: Text('Selamat datang! Sedang memuat data...'));
-          },
-        ),
-        // PERBAIKAN: FAB sekarang menjadi bagian dari Scaffold HomePage
-        floatingActionButton: FloatingActionButton(
-          onPressed: () => _showSupportOptions(context),
-          backgroundColor: Theme.of(context).primaryColor,
-          shape: const CircleBorder(),
-          child: const Icon(Icons.support_agent_outlined, color: Colors.white),
-        ),
-        // Gunakan lokasi standar jika BottomAppBar tidak ada
-        floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-      ),
-    );
-  }
-
-  // --- Fungsi helper dipindahkan ke dalam HomePage ---
-
-  void _showSupportOptions(BuildContext context) {
-    const String securityUserId = 'af7321dd-7ce2-4112-999e-0b88edad8d0d'; // Ganti dengan ID user keamanan
-    const String securityUserName = 'Pihak Keamanan';
-
-    showModalBottomSheet(
-      context: context,
-      builder: (ctx) {
-        return SafeArea(
-          child: Wrap(
-            children: <Widget>[
-              ListTile(
-                leading: const Icon(Icons.feedback_outlined),
-                title: const Text('Lapor Bug / Beri Masukan Aplikasi'),
-                onTap: () {
-                  Navigator.of(ctx).pop();
-                  context.pushNamed(FeedbackPage.routeName);
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.security_outlined),
-                title: const Text('Hubungi Keamanan'),
-                onTap: () {
-                  Navigator.of(ctx).pop();
-                  context.pushNamed(
-                    ChatDetailPage.routeName,
-                    pathParameters: {'chatRoomId': 'new'},
-                    queryParameters: {
-                      'recipientId': securityUserId,
-                      'recipientName': securityUserName,
-                    },
-                  );
-                },
-              ),
-            ],
-          ),
-        );
+                SliverList(
+                  delegate: SliverChildListDelegate(
+                    [
+                      CategoriesListWidget(categories: state.categories),
+                      Container(
+                        margin: const EdgeInsets.symmetric(
+                            horizontal: 16.0, vertical: 20.0),
+                        padding: const EdgeInsets.all(16.0),
+                        decoration: BoxDecoration(
+                            color: Colors.blue[50],
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.blue.shade200)),
+                        child: const Text(
+                          'Jaga barang bawaan Anda dengan baik. Kehilangan dapat merepotkan!',
+                          textAlign: TextAlign.center,
+                          style:
+                              TextStyle(fontSize: 15, color: Colors.blueGrey),
+                        ),
+                      ),
+                      LocationsListWidget(locations: state.locations),
+                      const SizedBox(height: 20),
+                      if (state.recentFoundItems.isNotEmpty)
+                        ItemsCarouselWidget(
+                          title: 'Temuan Barang Terbaru',
+                          items: state.recentFoundItems,
+                          onSeeAll: () {
+                            context.pushNamed(
+                              SearchResultsPage.routeName,
+                              queryParameters: {'reportType': 'penemuan'},
+                            );
+                          },
+                        ),
+                      const SizedBox(height: 80), // Space untuk FAB
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+        return const Center(
+            child: Text('Selamat datang! Sedang memuat data...'));
       },
     );
   }
@@ -152,19 +92,34 @@ class HomePage extends StatelessWidget {
           height: headerHeight,
           width: double.infinity,
           decoration: const BoxDecoration(
+            color: Colors.white,
             borderRadius: BorderRadius.vertical(
-                bottom: Radius.circular(borderRadiusValue)),
+              bottom: Radius.circular(borderRadiusValue),
+            ),
             image: DecorationImage(
               image: AssetImage('assets/baranghilang.png'),
-              fit: BoxFit.cover,
+              fit: BoxFit.contain,
             ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black26,
+                offset: Offset(0, 2),
+                blurRadius: 8,
+                spreadRadius: 0,
+              ),
+            ],
           ),
         ),
-        Positioned.fill(
+        Positioned(
+          bottom: 0,
+          left: 0,
+          right: 0,
           child: Container(
-            decoration: BoxDecoration(
-              borderRadius: const BorderRadius.vertical(
-                  bottom: Radius.circular(borderRadiusValue)),
+            height: 40,
+            decoration: const BoxDecoration(
+              borderRadius: BorderRadius.vertical(
+                bottom: Radius.circular(borderRadiusValue),
+              ),
             ),
           ),
         ),
@@ -181,9 +136,10 @@ class HomePage extends StatelessWidget {
                     context.pushNamed(SearchResultsPage.routeName);
                   },
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                     decoration: BoxDecoration(
-                      color: Theme.of(context).cardColor.withOpacity(0.95),
+                      color: Theme.of(context).cardColor,
                       borderRadius: BorderRadius.circular(25),
                       boxShadow: [
                         BoxShadow(
@@ -195,11 +151,13 @@ class HomePage extends StatelessWidget {
                     ),
                     child: Row(
                       children: [
-                        Icon(Icons.search, color: Theme.of(context).hintColor, size: 20),
+                        Icon(Icons.search,
+                            color: Theme.of(context).hintColor, size: 20),
                         const SizedBox(width: 8),
                         Text('Cari barang...',
                             style: TextStyle(
-                                color: Theme.of(context).hintColor, fontSize: 16)),
+                                color: Theme.of(context).hintColor,
+                                fontSize: 16)),
                       ],
                     ),
                   ),
@@ -213,13 +171,14 @@ class HomePage extends StatelessWidget {
                 child: InkWell(
                   customBorder: const CircleBorder(),
                   onTap: () {
+                    // --- PERBAIKAN 3: Gunakan pushNamed untuk navigasi ke rute non-shell ---
                     context.pushNamed(ProfilePage.routeName);
                   },
-                  child: Padding(
-                    padding: const EdgeInsets.all(10.0),
+                  child: const Padding(
+                    padding: EdgeInsets.all(10.0),
                     child: Icon(
                       Icons.person_outline,
-                      color: Theme.of(context).primaryColor,
+                      color: Colors.black,
                       size: 24,
                     ),
                   ),

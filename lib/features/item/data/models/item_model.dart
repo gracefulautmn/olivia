@@ -27,6 +27,10 @@ class ItemModel extends ItemEntity {
     super.category,
     super.location,
     super.reporterProfile,
+    // Menambahkan properti baru dari entity
+    super.claimedAt,
+    super.claimerProfile,
+    super.guestClaimerDetails,
   });
   
   factory ItemModel.fromEntity(ItemEntity entity) {
@@ -48,37 +52,24 @@ class ItemModel extends ItemEntity {
       category: entity.category,
       location: entity.location,
       reporterProfile: entity.reporterProfile,
+      claimedAt: entity.claimedAt,
+      claimerProfile: entity.claimerProfile,
+      guestClaimerDetails: entity.guestClaimerDetails,
     );
   }
 
   factory ItemModel.fromJson(Map<String, dynamic> json) {
-    // --- PERBAIKAN: Logika parsing yang lebih langsung dan aman ---
+    // --- PERBAIKAN UTAMA DI SINI ---
+    Map<String, dynamic>? firstClaim;
+    final claimsData = json['claims'];
 
-    CategoryModel? parsedCategory;
-    if (json['categories'] != null && json['categories'] is Map<String, dynamic>) {
-      try {
-        parsedCategory = CategoryModel.fromJson(json['categories']);
-      } catch (e) {
-        print('Error parsing nested CategoryModel: $e. Data: ${json['categories']}');
-      }
-    }
-
-    LocationModel? parsedLocation;
-    if (json['locations'] != null && json['locations'] is Map<String, dynamic>) {
-      try {
-        parsedLocation = LocationModel.fromJson(json['locations']);
-      } catch (e) {
-        print('Error parsing nested LocationModel: $e. Data: ${json['locations']}');
-      }
-    }
-
-    UserProfileModel? parsedProfile;
-    if (json['profiles'] != null && json['profiles'] is Map<String, dynamic>) {
-      try {
-        parsedProfile = UserProfileModel.fromJson(json['profiles']);
-      } catch (e) {
-        print('Error parsing nested UserProfileModel: $e. Data: ${json['profiles']}');
-      }
+    // Cek jika 'claims' adalah List dan tidak kosong
+    if (claimsData is List && claimsData.isNotEmpty) {
+      firstClaim = claimsData.first as Map<String, dynamic>?;
+    } 
+    // Cek jika 'claims' adalah Map (objek tunggal)
+    else if (claimsData is Map<String, dynamic>) {
+      firstClaim = claimsData;
     }
 
     return ItemModel(
@@ -97,9 +88,14 @@ class ItemModel extends ItemEntity {
       latitude: json['latitude'],
       longitude: json['longitude'],
       
-      category: parsedCategory,
-      location: parsedLocation,
-      reporterProfile: parsedProfile,
+      category: json['category'] == null ? null : CategoryModel.fromJson(json['category']),
+      location: json['location'] == null ? null : LocationModel.fromJson(json['location']),
+      reporterProfile: json['reporterProfile'] == null ? null : UserProfileModel.fromJson(json['reporterProfile']),
+      
+      // Mengambil data dari objek klaim yang sudah diproses dengan aman
+      claimedAt: firstClaim?['claimed_at'] == null ? null : DateTime.tryParse(firstClaim!['claimed_at'].toString()),
+      guestClaimerDetails: firstClaim?['guest_claimer_details'] as String?,
+      claimerProfile: firstClaim?['claimerProfile'] == null ? null : UserProfileModel.fromJson(firstClaim!['claimerProfile']),
     );
   }
 }

@@ -6,28 +6,35 @@ import 'package:olivia/core/usecases/usecase.dart';
 import 'package:olivia/core/utils/enums.dart';
 import 'package:olivia/features/home/domain/entities/category.dart';
 import 'package:olivia/features/home/domain/entities/location.dart';
-import 'package:olivia/features/home/domain/usecases/get_categories.dart'; // Untuk dropdown
-import 'package:olivia/features/home/domain/usecases/get_locations.dart'; // Untuk dropdown
+import 'package:olivia/features/home/domain/usecases/get_categories.dart';
+import 'package:olivia/features/home/domain/usecases/get_locations.dart';
 import 'package:olivia/features/item/domain/entities/item.dart';
 import 'package:olivia/features/item/domain/usecases/report_item.dart';
+import 'package:olivia/features/item/domain/usecases/update_item.dart'; // <-- IMPORT BARU
 
 part 'report_item_event.dart';
 part 'report_item_state.dart';
 
 class ReportItemBloc extends Bloc<ReportItemEvent, ReportItemState> {
   final ReportItem _reportItemUseCase;
-  final GetCategories
-  _getCategoriesUseCase; // Inject use case untuk ambil kategori
-  final GetLocations _getLocationsUseCase; // Inject use case untuk ambil lokasi
+  final UpdateItem _updateItemUseCase; // <-- DEPENDENSI BARU
+  final GetCategories _getCategoriesUseCase;
+  final GetLocations _getLocationsUseCase;
 
   ReportItemBloc({
     required ReportItem reportItemUseCase,
+    required UpdateItem updateItemUseCase, // <-- DEPENDENSI BARU
     required GetCategories getCategoriesUseCase,
     required GetLocations getLocationsUseCase,
-  }) : _reportItemUseCase = reportItemUseCase,
-       _getCategoriesUseCase = getCategoriesUseCase,
-       _getLocationsUseCase = getLocationsUseCase,
-       super(const ReportItemState()) {
+  })  : _reportItemUseCase = reportItemUseCase,
+        _updateItemUseCase = updateItemUseCase, // <-- DEPENDENSI BARU
+        _getCategoriesUseCase = getCategoriesUseCase,
+        _getLocationsUseCase = getLocationsUseCase,
+        super(const ReportItemState()) {
+    
+    on<InitializeForEdit>(_onInitializeForEdit); // <-- HANDLER BARU
+    on<UpdateItemSubmitted>(_onUpdateItemSubmitted); // <-- HANDLER BARU
+    
     on<ReportItemTypeChanged>(_onReportItemTypeChanged);
     on<ReportItemNameChanged>(_onReportItemNameChanged);
     on<ReportItemDescriptionChanged>(_onReportItemDescriptionChanged);
@@ -37,8 +44,23 @@ class ReportItemBloc extends Bloc<ReportItemEvent, ReportItemState> {
     on<ReportItemSubmitted>(_onReportItemSubmitted);
     on<LoadCategoriesAndLocations>(_onLoadCategoriesAndLocations);
 
-    // Load kategori dan lokasi saat BLoC diinisialisasi
     add(LoadCategoriesAndLocations());
+  }
+
+  // --- HANDLER BARU UNTUK MENGISI FORM SAAT EDIT ---
+  void _onInitializeForEdit(
+    InitializeForEdit event,
+    Emitter<ReportItemState> emit,
+  ) {
+    emit(state.copyWith(
+      status: ReportItemStatus.initial,
+      itemName: event.itemToEdit.itemName,
+      description: event.itemToEdit.description ?? '',
+      reportType: event.itemToEdit.reportType,
+      selectedCategory: event.itemToEdit.category,
+      selectedLocation: event.itemToEdit.location,
+      initialImageUrl: event.itemToEdit.imageUrl,
+    ));
   }
 
   void _onReportItemTypeChanged(
@@ -107,9 +129,7 @@ class ReportItemBloc extends Bloc<ReportItemEvent, ReportItemState> {
     );
 
     locationsResult.fold(
-      (failure) =>
-          loadingFailure =
-              failure, // Bisa menimpa error sebelumnya, handle jika perlu
+      (failure) => loadingFailure = failure,
       (data) => locations = data,
     );
 
@@ -118,16 +138,14 @@ class ReportItemBloc extends Bloc<ReportItemEvent, ReportItemState> {
         state.copyWith(
           status: ReportItemStatus.failure,
           failure: loadingFailure,
-          categories: categories, // Kirim data yang berhasil dimuat jika ada
+          categories: categories,
           locations: locations,
         ),
       );
     } else {
       emit(
         state.copyWith(
-          status:
-              ReportItemStatus
-                  .initial, // Kembali ke initial setelah data dimuat
+          status: ReportItemStatus.initial,
           categories: categories,
           locations: locations,
           clearFailure: true,
@@ -140,18 +158,7 @@ class ReportItemBloc extends Bloc<ReportItemEvent, ReportItemState> {
     ReportItemSubmitted event,
     Emitter<ReportItemState> emit,
   ) async {
-    if (!state.isFormValid) {
-      emit(
-        state.copyWith(
-          status: ReportItemStatus.failure,
-          failure: InputValidationFailure(
-            "Harap lengkapi semua field yang wajib diisi.",
-          ),
-        ),
-      );
-      return;
-    }
-
+    // Validasi form dipindahkan ke UI untuk feedback yang lebih cepat
     emit(state.copyWith(status: ReportItemStatus.loading, clearFailure: true));
 
     final params = ReportItemParams(
@@ -159,13 +166,40 @@ class ReportItemBloc extends Bloc<ReportItemEvent, ReportItemState> {
       itemName: state.itemName,
       description: state.description.isNotEmpty ? state.description : null,
       categoryId: state.selectedCategory?.id,
-      locationId: state.selectedLocation?.id,
+      locationId: state.selectedLocation!.id, // Diasumsikan tidak null karena sudah divalidasi
       reportType: reportTypeToString(state.reportType),
       imageFile: state.imageFile,
-      // latitude dan longitude bisa ditambahkan di sini jika ada inputnya
     );
 
     final result = await _reportItemUseCase(params);
+
+    result.fold(
+      (failure) => emit(
+        state.copyWith(status: ReportItemStatus.failure, failure: failure),
+      ),
+      (item) => emit(
+        state.copyWith(status: ReportItemStatus.success, reportedItem: item),
+      ),
+    );
+  }
+
+  // --- HANDLER BARU UNTUK MENYIMPAN PERUBAHAN ---
+  Future<void> _onUpdateItemSubmitted(
+    UpdateItemSubmitted event,
+    Emitter<ReportItemState> emit,
+  ) async {
+    emit(state.copyWith(status: ReportItemStatus.loading, clearFailure: true));
+
+    final params = UpdateItemParams(
+      itemId: event.itemId,
+      itemName: state.itemName,
+      description: state.description.isNotEmpty ? state.description : null,
+      categoryId: state.selectedCategory?.id,
+      locationId: state.selectedLocation!.id,
+      newImageFile: state.imageFile,
+    );
+
+    final result = await _updateItemUseCase(params);
 
     result.fold(
       (failure) => emit(

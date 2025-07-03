@@ -26,7 +26,6 @@ class UserProfileModel extends UserProfile {
 
   factory UserProfileModel.fromJson(Map<String, dynamic> json) {
     return UserProfileModel(
-      // PERBAIKAN: Berikan nilai default jika null
       id: json['id']?.toString() ?? '',
       email: json['email']?.toString() ?? 'Tidak ada email',
       fullName: json['full_name']?.toString() ?? 'Nama Tidak Diketahui',
@@ -35,6 +34,23 @@ class UserProfileModel extends UserProfile {
       major: json['major']?.toString(),
       avatarUrl: json['avatar_url'] as String?,
     );
+  }
+
+  // --- PERBAIKAN UTAMA: Tambahkan metode statis yang aman untuk data null ---
+  static UserProfileModel? fromJsonNullable(Map<String, dynamic>? json) {
+    // Jika data JSON yang diterima adalah null, langsung kembalikan null.
+    if (json == null) {
+      return null;
+    }
+    // Jika data tidak null, coba parsing seperti biasa.
+    try {
+      return UserProfileModel.fromJson(json);
+    } catch (e) {
+      // Jika terjadi error saat parsing, catat dan kembalikan null.
+      // ignore: avoid_print
+      print('Error parsing UserProfileModel: $e. Data: $json');
+      return null;
+    }
   }
 
   Map<String, dynamic> toJson() {

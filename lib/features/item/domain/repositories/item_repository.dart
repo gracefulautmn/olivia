@@ -1,8 +1,10 @@
 import 'dart:io';
 import 'package:dartz/dartz.dart';
 import 'package:olivia/core/errors/failures.dart';
-import 'package:olivia/features/item/domain/entities/item.dart';
 import 'package:olivia/features/history/domain/entities/claim_history_entry.dart';
+import 'package:olivia/features/item/domain/entities/item.dart';
+// Impor params dari use case, asumsikan path ini benar atau params dipindahkan ke lokasi yang dapat diakses
+import 'package:olivia/features/item/domain/usecases/submit_guest_claim.dart';
 
 abstract class ItemRepository {
   Future<Either<Failure, ItemEntity>> reportItem({
@@ -35,14 +37,12 @@ abstract class ItemRepository {
     required String claimerId,
   });
 
-  // === METODE BARU UNTUK RIWAYAT GLOBAL ===
+  // === METODE BARU UNTUK KLAIM OLEH TAMU ===
+  Future<Either<Failure, void>> submitGuestClaim(SubmitGuestClaimParams params);
+
   Future<Either<Failure, List<ClaimHistoryEntry>>> getGlobalClaimHistory();
 
-  // === METODE LAMA YANG SUDAH TIDAK RELEVAN DIHAPUS ===
-  // Future<Either<Failure, List<ItemEntity>>> getClaimedItemsHistory(...) -> Dihapus
-  // Future<Either<Failure, ItemEntity>> updateItemStatus(...) -> Dihapus
-
-  // Update dan delete item oleh reporter tetap ada
   Future<Either<Failure, ItemEntity>> updateItem(ItemEntity item, {File? newImageFile});
+
   Future<Either<Failure, void>> deleteItem(String itemId);
 }

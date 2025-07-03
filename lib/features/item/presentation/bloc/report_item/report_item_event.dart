@@ -7,6 +7,26 @@ abstract class ReportItemEvent extends Equatable {
   List<Object?> get props => [];
 }
 
+// --- EVENT BARU UNTUK MODE EDIT ---
+class InitializeForEdit extends ReportItemEvent {
+  final ItemEntity itemToEdit;
+  const InitializeForEdit(this.itemToEdit);
+
+  @override
+  List<Object> get props => [itemToEdit];
+}
+
+// --- EVENT BARU UNTUK UPDATE ---
+class UpdateItemSubmitted extends ReportItemEvent {
+  final String itemId; // ID dari item yang diupdate
+  const UpdateItemSubmitted({required this.itemId});
+
+  @override
+  List<Object> get props => [itemId];
+}
+
+
+// --- Event yang sudah ada ---
 class ReportItemTypeChanged extends ReportItemEvent {
   final ReportType reportType;
   const ReportItemTypeChanged(this.reportType);
@@ -49,13 +69,11 @@ class ReportItemImagePicked extends ReportItemEvent {
   List<Object?> get props => [image];
 }
 
-// Event untuk memuat kategori dan lokasi untuk dropdown/pilihan
 class LoadCategoriesAndLocations extends ReportItemEvent {}
 
-
 class ReportItemSubmitted extends ReportItemEvent {
-  final String currentUserId; // Diperlukan untuk reporterId
+  final String currentUserId; 
   const ReportItemSubmitted({required this.currentUserId});
-   @override
+    @override
   List<Object?> get props => [currentUserId];
 }

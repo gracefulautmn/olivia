@@ -1,17 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:olivia/core/utils/app_colors.dart'; // Sesuaikan path
+import 'package:olivia/core/utils/app_colors.dart';
 import 'package:olivia/features/auth/presentation/bloc/auth_bloc.dart';
-import 'package:olivia/features/auth/presentation/pages/login_page.dart'; // Untuk navigasi kembali ke login
-import 'package:olivia/navigation/main_navigation_scaffold.dart'; // Untuk navigasi ke home setelah sukses
-import 'package:olivia/common_widgets/custom_button.dart'; // Sesuaikan path
-import 'package:olivia/common_widgets/loading_indicator.dart'; // Sesuaikan path
+import 'package:olivia/features/auth/presentation/pages/login_page.dart';
+import 'package:olivia/features/home/presentation/pages/home_page.dart'; // <-- IMPORT BARU
+import 'package:olivia/common_widgets/custom_button.dart';
 
 class SignUpPage extends StatefulWidget {
   const SignUpPage({super.key});
 
-  static const String routeName = '/signup'; // Definisikan rute
+  static const String routeName = '/signup';
 
   @override
   State<SignUpPage> createState() => _SignUpPageState();
@@ -40,14 +39,12 @@ class _SignUpPageState extends State<SignUpPage> {
       final password = _passwordController.text.trim();
       final confirmPassword = _confirmPasswordController.text.trim();
 
-      print('Signing up with Email: $email, FullName: $fullName');
-
       context.read<AuthBloc>().add(AuthSignUpRequested(
-          email: email,
-          password: password,
-          confirmPassword: confirmPassword,
-          fullName: fullName,
-        ));
+            email: email,
+            password: password,
+            confirmPassword: confirmPassword,
+            fullName: fullName,
+          ));
     }
   }
 
@@ -56,30 +53,27 @@ class _SignUpPageState extends State<SignUpPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Daftar Akun Baru'),
-        leading: IconButton( // Tombol kembali jika diperlukan
+        leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
             if (context.canPop()) {
               context.pop();
             } else {
-              // Jika tidak bisa pop (mungkin rute awal), pergi ke login
               context.go(LoginPage.routeName);
             }
           },
         ),
       ),
       body: BlocListener<AuthBloc, AuthState>(
-        // Dengarkan AuthBloc yang di-provide di level yang lebih tinggi
-        // (misal di MaterialApp atau AppRouter)
         listener: (context, state) {
           if (state.status == AuthStatus.authenticated) {
-            // Navigasi ke halaman utama setelah signup berhasil
             ScaffoldMessenger.of(context)
               ..hideCurrentSnackBar()
               ..showSnackBar(const SnackBar(
                   content: Text('Pendaftaran berhasil! Selamat datang.'),
                   backgroundColor: Colors.green));
-            context.go(MainNavigationScaffold.routeName);
+            // --- PERBAIKAN NAVIGASI ---
+            context.goNamed(HomePage.routeName);
           }
           if (state.status == AuthStatus.unauthenticated && state.failure != null) {
             ScaffoldMessenger.of(context)
@@ -98,7 +92,6 @@ class _SignUpPageState extends State<SignUpPage> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
-                  // Placeholder untuk logo atau gambar
                   FlutterLogo(size: 80, style: FlutterLogoStyle.stacked, textColor: AppColors.primaryColor),
                   const SizedBox(height: 30),
                   TextFormField(
@@ -129,12 +122,11 @@ class _SignUpPageState extends State<SignUpPage> {
                       if (value == null || value.isEmpty) {
                         return 'Email tidak boleh kosong';
                       }
-                      // Validasi domain bisa lebih ketat di usecase/BLoC
                       if (!value.contains('@') || !value.contains('.')) {
                         return 'Format email tidak valid';
                       }
                       if (!value.toLowerCase().endsWith('universitaspertamina.ac.id')){
-                         return 'Gunakan email domain universitaspertamina.ac.id';
+                          return 'Gunakan email domain universitaspertamina.ac.id';
                       }
                       return null;
                     },
@@ -179,7 +171,6 @@ class _SignUpPageState extends State<SignUpPage> {
                   ),
                   const SizedBox(height: 30),
                   BlocBuilder<AuthBloc, AuthState>(
-                    // Build berdasarkan AuthBloc yang di-provide di atas
                     builder: (context, state) {
                       return CustomButton(
                         text: 'Daftar',
@@ -197,7 +188,7 @@ class _SignUpPageState extends State<SignUpPage> {
                       const Text("Sudah punya akun? "),
                       TextButton(
                         onPressed: () {
-                          context.go(LoginPage.routeName); // Kembali ke halaman login
+                          context.go(LoginPage.routeName);
                         },
                         child: const Text('Login di sini'),
                       ),

@@ -11,6 +11,9 @@ class GlobalHistoryItemCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // --- PERBAIKAN 1: Tentukan apakah ini klaim oleh tamu ---
+    final bool isGuestClaim = entry.claimerProfile == null;
+
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
       elevation: 2,
@@ -29,7 +32,7 @@ class GlobalHistoryItemCard extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // --- GAMBAR BARANG (Ditambahkan dari ItemListCard) ---
+              // --- GAMBAR BARANG ---
               Container(
                 width: 80,
                 height: 80,
@@ -93,17 +96,35 @@ class GlobalHistoryItemCard extends StatelessWidget {
                     // Detail Klaim
                     _buildInfoRow(
                       context,
-                      icon: Icons.person_search_outlined,
-                      label: 'Ditemukan oleh',
+                      icon: Icons.security_outlined, // Ikon untuk petugas
+                      label: 'Diproses oleh',
                       value: entry.securityProfile.fullName,
                     ),
                     const SizedBox(height: 4),
+                    // --- PERBAIKAN 2: Tampilkan info pengklaim secara dinamis ---
                     _buildInfoRow(
                       context,
-                      icon: Icons.person_pin_circle_outlined,
+                      icon: isGuestClaim ? Icons.person_pin_outlined : Icons.person_search_outlined,
                       label: 'Diklaim oleh',
-                      value: entry.claimerProfile.fullName,
+                      // Jika tamu, tampilkan detail tamu. Jika bukan, tampilkan nama profil.
+                      value: isGuestClaim 
+                          ? 'Tamu (Non-Akun)' 
+                          : entry.claimerProfile!.fullName,
                     ),
+                    // Tampilkan detail tamu jika ada
+                    if (isGuestClaim && entry.guestClaimerDetails != null && entry.guestClaimerDetails!.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4.0, left: 22.0), // Indentasi
+                        child: Text(
+                          entry.guestClaimerDetails!,
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Colors.grey[600],
+                            fontStyle: FontStyle.italic,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
                   ],
                 ),
               ),

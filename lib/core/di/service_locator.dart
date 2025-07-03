@@ -5,6 +5,11 @@ import 'package:olivia/features/feedback/data/repositories/feedback_repository_i
 import 'package:olivia/features/feedback/domain/repositories/feedback_repository.dart';
 import 'package:olivia/features/feedback/domain/usecases/submit_feedback.dart';
 import 'package:olivia/features/feedback/presentation/bloc/feedback_bloc.dart';
+import 'package:olivia/features/history/presentation/bloc/my_reports_bloc.dart';
+import 'package:olivia/features/item/domain/usecases/submit_guest_claim.dart';
+import 'package:olivia/features/item/presentation/bloc/manual_claim_bloc.dart'; // <-- IMPORT BARU
+import 'package:olivia/features/item/presentation/pages/item_detail_page.dart';
+import 'package:olivia/features/item/presentation/pages/scan_qr_page.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 // Core & Utils (jika ada NetworkInfo)
@@ -36,15 +41,13 @@ import 'package:olivia/features/item/data/datasources/item_remote_data_source.da
 import 'package:olivia/features/item/data/repositories/item_repository_impl.dart';
 import 'package:olivia/features/item/domain/repositories/item_repository.dart';
 import 'package:olivia/features/item/domain/usecases/claim_item_via_qr.dart';
-import 'package:olivia/features/item/domain/usecases/delete_item.dart'; // Import DeleteItem jika belum ada
+import 'package:olivia/features/item/domain/usecases/delete_item.dart';
 import 'package:olivia/features/item/domain/usecases/get_item_details.dart';
 import 'package:olivia/features/item/domain/usecases/report_item.dart';
 import 'package:olivia/features/item/domain/usecases/search_items.dart';
-import 'package:olivia/features/item/domain/usecases/update_item.dart'; // Import UpdateItem jika belum ada
+import 'package:olivia/features/item/domain/usecases/update_item.dart';
 import 'package:olivia/features/item/presentation/bloc/report_item/report_item_bloc.dart';
 import 'package:olivia/features/item/presentation/bloc/search_items_bloc.dart';
-import 'package:olivia/features/item/presentation/pages/item_detail_page.dart';
-import 'package:olivia/features/item/presentation/pages/scan_qr_page.dart';
 
 // Profile Feature
 import 'package:olivia/features/profile/data/datasources/profile_remote_data_source.dart';
@@ -84,16 +87,14 @@ final sl = GetIt.instance;
 
 Future<void> init() async {
   // === EXTERNAL ===
-  // PERBAIKAN: Menggunakan registerSingleton untuk instance yang sudah ada
   sl.registerSingleton<SupabaseClient>(Supabase.instance.client);
-  // PERBAIKAN: Nama kelas yang benar dari package
   sl.registerLazySingleton(() => InternetConnection());
 
   // === CORE ===
   // sl.registerLazySingleton<NetworkInfo>(() => NetworkInfoImpl(sl()));
 
   // ===================================================================
-  //                             FITUR AUTH
+  //                         FITUR AUTH
   // ===================================================================
   // BLoC
   sl.registerFactory(() => AuthBloc(
@@ -118,7 +119,7 @@ Future<void> init() async {
       () => AuthRemoteDataSourceImpl(supabaseClient: sl()));
 
   // ===================================================================
-  //                             FITUR HOME
+  //                         FITUR HOME
   // ===================================================================
   // BLoC
   sl.registerFactory(() => HomeBloc(
@@ -140,23 +141,29 @@ Future<void> init() async {
       () => HomeRemoteDataSourceImpl(supabaseClient: sl()));
   
   // ===================================================================
-  //                      FITUR ITEM, HISTORY, SCAN
+  //                   FITUR ITEM, HISTORY, SCAN
   // ===================================================================
   // BLoC / Cubit
   sl.registerFactory(() => ReportItemBloc(
         reportItemUseCase: sl(),
         getCategoriesUseCase: sl(),
-        getLocationsUseCase: sl(),
+        getLocationsUseCase: sl(), 
+        updateItemUseCase: sl(),
       ));
-  sl.registerFactory(() => ItemDetailCubit(sl()));
+  sl.registerFactory(() => ItemDetailCubit(sl(), sl(), sl()));
   sl.registerFactory(() => ScanClaimCubit(sl()));
   sl.registerFactory(() => SearchItemsBloc(
         searchItemsUseCase: sl(),
         getCategoriesUseCase: sl(),
         getLocationsUseCase: sl(),
       ));
-  // PERBAIKAN: Menggunakan BLoC dan Use Case yang benar untuk riwayat
   sl.registerFactory(() => GlobalHistoryBloc(sl<GetGlobalClaimHistory>()));
+  sl.registerFactory(() => MyReportsBloc(sl()));
+  // --- PENAMBAHAN UNTUK KLAIM MANUAL ---
+  sl.registerFactory(() => ManualClaimBloc(
+        searchItems: sl(),
+        submitGuestClaim: sl(),
+      ));
 
   // Use Cases
   sl.registerLazySingleton(() => ReportItem(sl()));
@@ -165,18 +172,17 @@ Future<void> init() async {
   sl.registerLazySingleton(() => ClaimItemViaQr(sl()));
   sl.registerLazySingleton(() => UpdateItem(sl()));
   sl.registerLazySingleton(() => DeleteItem(sl()));
-  // PERBAIKAN: Mendaftarkan use case riwayat global yang baru
+  sl.registerLazySingleton(() => SubmitGuestClaim(sl()));
   sl.registerLazySingleton(() => GetGlobalClaimHistory(sl()));
 
   // Repository & DataSource
-  // PERBAIKAN: ItemRepositoryImpl tidak lagi memerlukan SupabaseClient
   sl.registerLazySingleton<ItemRepository>(
       () => ItemRepositoryImpl(remoteDataSource: sl()));
   sl.registerLazySingleton<ItemRemoteDataSource>(
       () => ItemRemoteDataSourceImpl(supabaseClient: sl()));
 
   // ===================================================================
-  //                            FITUR PROFILE
+  //                        FITUR PROFILE
   // ===================================================================
   // BLoC
   sl.registerFactory(() => ProfileBloc(
@@ -196,14 +202,14 @@ Future<void> init() async {
       () => ProfileRemoteDataSourceImpl(supabaseClient: sl()));
 
   // ===================================================================
-  //                         FITUR NOTIFICATION
+  //                       FITUR NOTIFICATION
   // ===================================================================
   // BLoC
   sl.registerFactory(() => NotificationBloc(
         getNotificationsUseCase: sl(),
         markNotificationAsReadUseCase: sl(),
         markAllNotificationsAsReadUseCase: sl(),
-        notificationRepository: sl(), // Mungkin bisa dihapus jika tidak digunakan langsung
+        notificationRepository: sl(),
       ));
 
   // Use Cases
@@ -219,7 +225,7 @@ Future<void> init() async {
       () => NotificationRemoteDataSourceImpl(supabaseClient: sl()));
   
   // ===================================================================
-  //                             FITUR CHAT
+  //                         FITUR CHAT
   // ===================================================================
   // BLoC
   sl.registerFactory(() => ChatListBloc(getChatRoomsUseCase: sl()));
@@ -255,5 +261,4 @@ Future<void> init() async {
   // Repository & DataSource
   sl.registerLazySingleton<FeedbackRepository>(() => FeedbackRepositoryImpl(remoteDataSource: sl()));
   sl.registerLazySingleton<FeedbackRemoteDataSource>(() => FeedbackRemoteDataSourceImpl(supabaseClient: sl()));
-
 }

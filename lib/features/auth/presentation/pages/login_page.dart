@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:olivia/core/utils/app_colors.dart';
 import 'package:olivia/features/auth/presentation/bloc/auth_bloc.dart';
-import 'package:olivia/features/auth/presentation/pages/signup_page.dart' show SignUpPage;
-import 'package:olivia/navigation/app_router.dart';
-import 'package:olivia/navigation/main_navigation.dart';
+import 'package:olivia/features/auth/presentation/pages/signup_page.dart';
+import 'package:olivia/features/home/presentation/pages/home_page.dart'; // <-- PERBAIKAN: Impor HomePage
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -62,7 +60,9 @@ class _LoginPageState extends State<LoginPage> {
           child: BlocListener<AuthBloc, AuthState>(
             listener: (context, state) {
               if (state.status == AuthStatus.authenticated) {
-                context.go(MainNavigationScaffold.routeName);
+                // --- PERBAIKAN NAVIGASI ---
+                // Arahkan ke rute HomePage yang benar setelah login berhasil
+                context.go(HomePage.routeName);
               }
               if (state.status == AuthStatus.unauthenticated &&
                   state.failure != null) {
@@ -73,8 +73,6 @@ class _LoginPageState extends State<LoginPage> {
             },
             child: Column(
               children: [
-                
-                
                 // Main content
                 Expanded(
                   child: SingleChildScrollView(
@@ -87,7 +85,7 @@ class _LoginPageState extends State<LoginPage> {
                           const SizedBox(height: 140),
                           // Logo OLIVIA
                           Image.asset(
-                            'OLIVIA.png',
+                            'assets/OLIVIA.png', // Pastikan path asset benar
                             height: 80,
                             fit: BoxFit.contain,
                           ),
